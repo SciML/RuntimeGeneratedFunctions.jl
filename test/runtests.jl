@@ -19,7 +19,7 @@ ex2 = :(function f(_du,_u,_p,_t)
     nothing
 end)
 
-ex3 = :(function (_du,_u,_p,_t)
+ex3 = :(function (_du::T,_u::Vector{E},_p::P,_t::Any) where {T<:Vector,E,P}
     @inbounds _du[1] = _u[1]
     @inbounds _du[2] = _u[2]
     nothing
@@ -34,23 +34,23 @@ u = rand(2)
 p = nothing
 t = nothing
 
-@test_broken f1(du,u,p,t)
-#du == u
+@test f1(du,u,p,t) === nothing
+du == u
 du = rand(2)
 f2(du,u,p,t)
 @test du == u
 du = rand(2)
-@test_broken f3(du,u,p,t)
-#du == u
+@test f3(du,u,p,t) === nothing
+du == u
 
 t1 = @belapsed $f($du,$u,$p,$t)
-#t2 = @belapsed $f1($du,$u,$p,$t)
+t2 = @belapsed $f1($du,$u,$p,$t)
 t3 = @belapsed $f2($du,$u,$p,$t)
-#t4 = @belapsed $f3($du,$u,$p,$t)
+t4 = @belapsed $f3($du,$u,$p,$t)
 
-@test_broken t1 ≈ t2 atol = 3e-9
+@test t1 ≈ t2 atol = 3e-9
 @test t1 ≈ t3 atol = 3e-9
-@test_broken t1 ≈ t4 atol = 3e-9
+@test t1 ≈ t4 atol = 3e-9
 
 function no_worldage()
     ex = :(function f(_du,_u,_p,_t)
@@ -65,4 +65,4 @@ function no_worldage()
     t = nothing
     f1(du,u,p,t)
 end
-no_worldage()
+@test no_worldage() === nothing
