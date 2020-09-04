@@ -7,6 +7,11 @@ issues and with the full performance of a standard Julia anonymous function. Thi
 builds functions in a way that avoids `eval`, but cannot store the precompiled
 functions between Julia sessions.
 
+Note that `RuntimeGeneratedFunction` does not handle closures. Please use the
+[GeneralizedGenerated.jl](https://github.com/JuliaStaging/GeneralizedGenerated.jl)
+package for more fixable staged programming. While `GeneralizedGenerated.jl` is
+more powerful, `RuntimeGeneratedFunctions.jl` handles large expressions better.
+
 Credit to Chris Foster (@c4tf) for the implementation idea.
 
 ## Example
