@@ -1,13 +1,13 @@
 module RuntimeGeneratedFunctions
 
-using ExprTools
+using ExprTools, Serialization, SHA
 
-const function_cache = Dict{UInt64,Expr}()
+const function_cache = Dict{Tuple,Expr}()
 struct RuntimeGeneratedFunction{uuid,argnames}
     function RuntimeGeneratedFunction(ex)
         def = splitdef(ex)
         args, body = normalize_args(def[:args]), def[:body]
-        uuid = hash(body)
+        uuid = expr2bytes(body)
         function_cache[uuid] = body
         new{uuid,Tuple(args)}()
     end
@@ -24,7 +24,6 @@ end
 
 export RuntimeGeneratedFunction
 
-
 ###
 ### Utilities
 ###
@@ -33,6 +32,12 @@ normalize_args(arg::Symbol) = arg
 function normalize_args(arg::Expr)
     arg.head === :(::) || error("argument malformed. Got $arg")
     arg.args[1]
+end
+
+function expr2bytes(ex)
+    io = IOBuffer()
+    Serialization.serialize(io, ex)
+    return Tuple(sha512(take!(io)))
 end
 
 end
