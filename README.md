@@ -7,6 +7,8 @@ issues and with the full performance of a standard Julia anonymous function. Thi
 builds functions in a way that avoids `eval`, but cannot store the precompiled
 functions between Julia sessions.
 
+Credit to Chris Foster (@c4tf) for the implementation idea.
+
 ## Example
 
 ```julia
