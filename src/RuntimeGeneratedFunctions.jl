@@ -1,12 +1,15 @@
 module RuntimeGeneratedFunctions
 
+using ExprTools
+
 const function_cache = Dict{UInt64,Expr}()
 struct RuntimeGeneratedFunction{uuid,argnames}
     function RuntimeGeneratedFunction(ex)
-        uuid = hash(ex.args[2])
-        function_cache[uuid] = ex.args[2]
-        argnames = (ex.args[1].args[2:end]...,)
-        new{uuid,argnames}()
+        def = splitdef(ex)
+        args, body = normalize_args(def[:args]), def[:body]
+        uuid = hash(body)
+        function_cache[uuid] = body
+        new{uuid,Tuple(args)}()
     end
 end
 (f::RuntimeGeneratedFunction)(args::Vararg{Any,N}) where N = generated_callfunc(f, args...)
@@ -20,5 +23,16 @@ end
 end
 
 export RuntimeGeneratedFunction
+
+
+###
+### Utilities
+###
+normalize_args(args::Vector) = map(normalize_args, args)
+normalize_args(arg::Symbol) = arg
+function normalize_args(arg::Expr)
+    arg.head === :(::) || error("argument malformed. Got $arg")
+    arg.args[1]
+end
 
 end
