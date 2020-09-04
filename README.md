@@ -1,5 +1,7 @@
 # RuntimeGeneratedFunctions.jl
 
+[![Build Status](https://travis-ci.com/SciML/RuntimeGeneratedFunctions.jl.svg?branch=master)](https://travis-ci.com/SciML/RuntimeGeneratedFunctions.jl)
+
 `RuntimeGeneratedFunctions` are functions generated at runtime without world-age
 issues and with the full performance of a standard Julia anonymous function. This
 builds functions in a way that avoids `eval`, but cannot store the precompiled
