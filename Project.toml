@@ -3,11 +3,14 @@ uuid = "7e49a35a-f44a-4d26-94aa-eba1b4ca6b47"
 authors = ["Chris Rackauckas <accounts@chrisrackauckas.com> and contributors"]
 version = "0.1.0"
 
+[deps]
+
 [compat]
 julia = "1"
 
 [extras]
+BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test"]
+test = ["BenchmarkTools","Test"]
