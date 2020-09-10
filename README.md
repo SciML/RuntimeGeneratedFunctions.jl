@@ -4,8 +4,7 @@
 
 `RuntimeGeneratedFunctions` are functions generated at runtime without world-age
 issues and with the full performance of a standard Julia anonymous function. This
-builds functions in a way that avoids `eval`, but cannot store the precompiled
-functions between Julia sessions.
+builds functions in a way that avoids `eval`.
 
 Note that `RuntimeGeneratedFunction` does not handle closures. Please use the
 [GeneralizedGenerated.jl](https://github.com/JuliaStaging/GeneralizedGenerated.jl)
@@ -23,7 +22,7 @@ function no_worldage()
         @inbounds _du[2] = _u[2]
         nothing
     end)
-    f1 = RuntimeGeneratedFunction(ex)
+    f1 = @RuntimeGeneratedFunction(ex)
     du = rand(2)
     u = rand(2)
     p = nothing
