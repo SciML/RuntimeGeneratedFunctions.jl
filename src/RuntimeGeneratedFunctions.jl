@@ -53,12 +53,13 @@ end
 function Base.show(io::IO, f::RuntimeGeneratedFunction{moduletag, id, argnames}) where {moduletag,id,argnames}
     body = _lookup_body(moduletag, id)
     mod = parentmodule(moduletag)
-    print(io, "RuntimeGeneratedFunction(#=in $mod=#, :(", :(($(argnames...),)->$body), "))")
+    func_expr = Expr(:->, Expr(:tuple, argnames...), body)
+    print(io, "RuntimeGeneratedFunction(#=in $mod=#, ", repr(func_expr), ")")
 end
 
 (f::RuntimeGeneratedFunction)(args::Vararg{Any,N}) where N = generated_callfunc(f, args...)
 
-@inline @generated function generated_callfunc(f::RuntimeGeneratedFunction{moduletag, id, argnames},__args...) where {moduletag,id,argnames}
+@inline @generated function generated_callfunc(f::RuntimeGeneratedFunction{moduletag, id, argnames}, __args...) where {moduletag,id,argnames}
     setup = (:($(argnames[i]) = @inbounds __args[$i]) for i in 1:length(argnames))
     quote
         $(setup...)

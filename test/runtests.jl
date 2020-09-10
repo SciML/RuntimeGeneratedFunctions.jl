@@ -67,6 +67,12 @@ function no_worldage()
 end
 @test no_worldage() === nothing
 
+# Test show()
+@test sprint(show, @RuntimeGeneratedFunction(Base.remove_linenums!(:((x,y)->x+y+1)))) ==
+     """
+     RuntimeGeneratedFunction(#=in $(@__MODULE__)=#, :((x, y)->begin
+               x + y + 1
+           end))"""
 
 # Test with precompilation
 push!(LOAD_PATH, joinpath(@__DIR__, "precomp"))
