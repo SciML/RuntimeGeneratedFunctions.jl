@@ -25,9 +25,9 @@ ex3 = :(function (_du::T,_u::Vector{E},_p::P,_t::Any) where {T<:Vector,E,P}
     nothing
 end)
 
-f1 = RuntimeGeneratedFunction(ex1)
-f2 = RuntimeGeneratedFunction(ex2)
-f3 = RuntimeGeneratedFunction(ex3)
+f1 = @RuntimeGeneratedFunction(ex1)
+f2 = @RuntimeGeneratedFunction(ex2)
+f3 = @RuntimeGeneratedFunction(ex3)
 
 du = rand(2)
 u = rand(2)
@@ -58,7 +58,7 @@ function no_worldage()
         @inbounds _du[2] = _u[2]
         nothing
     end)
-    f1 = RuntimeGeneratedFunction(ex)
+    f1 = @RuntimeGeneratedFunction(ex)
     du = rand(2)
     u = rand(2)
     p = nothing
@@ -66,3 +66,17 @@ function no_worldage()
     f1(du,u,p,t)
 end
 @test no_worldage() === nothing
+
+# Test show()
+@test sprint(show, @RuntimeGeneratedFunction(Base.remove_linenums!(:((x,y)->x+y+1)))) ==
+     """
+     RuntimeGeneratedFunction(#=in $(@__MODULE__)=#, :((x, y)->begin
+               x + y + 1
+           end))"""
+
+# Test with precompilation
+push!(LOAD_PATH, joinpath(@__DIR__, "precomp"))
+using RGFPrecompTest
+
+@test RGFPrecompTest.f(1,2) == 3
+
