@@ -10,13 +10,15 @@ export @RuntimeGeneratedFunction
 
 This type should be constructed via the macro @RuntimeGeneratedFunction.
 """
-struct RuntimeGeneratedFunction{moduletag,id,argnames}
+mutable struct RuntimeGeneratedFunction{moduletag,id,argnames}
+    body::Expr
     function RuntimeGeneratedFunction(moduletag, ex)
+        id = expr2bytes(ex)
         def = splitdef(ex)
         args, body = normalize_args(def[:args]), def[:body]
-        id = expr2bytes(body)
-        _cache_body(moduletag, id, body)
-        new{moduletag,id,Tuple(args)}()
+        f = new{moduletag,id,Tuple(args)}(body)
+        _cache_self(moduletag, id, f)
+        return f
     end
 end
 
@@ -51,9 +53,8 @@ macro RuntimeGeneratedFunction(ex)
 end
 
 function Base.show(io::IO, f::RuntimeGeneratedFunction{moduletag, id, argnames}) where {moduletag,id,argnames}
-    body = _lookup_body(moduletag, id)
     mod = parentmodule(moduletag)
-    func_expr = Expr(:->, Expr(:tuple, argnames...), body)
+    func_expr = Expr(:->, Expr(:tuple, argnames...), f.body)
     print(io, "RuntimeGeneratedFunction(#=in $mod=#, ", repr(func_expr), ")")
 end
 
@@ -61,21 +62,21 @@ end
 
 @inline @generated function generated_callfunc(f::RuntimeGeneratedFunction{moduletag, id, argnames}, __args...) where {moduletag,id,argnames}
     setup = (:($(argnames[i]) = @inbounds __args[$i]) for i in 1:length(argnames))
+    f_value = _lookup_self(moduletag, id)
     quote
         $(setup...)
-        $(_lookup_body(moduletag, id))
+        $(f_value.body)
     end
 end
 
-### Function body caching and lookup
+### Function caching and lookup
 #
-# Caching the body of a RuntimeGeneratedFunction is a little complicated
-# because we want the `id=>body` mapping to survive precompilation. This means
-# we need to store the cache of mappings which are created by a module in that
-# module itself.
+# Looking up a RuntimeGeneratedFunction based on the id is a little complicated
+# because we want the `id=>func` mapping to survive precompilation. This means
+# we need to store the mapping created by a module in that module itself.
 #
 # For that, we need a way to lookup the correct module from an instance of
-# RuntimeGeneratedFunction.  Modules can't be type parameters, but we can use
+# RuntimeGeneratedFunction. Modules can't be type parameters, but we can use
 # any type which belongs to the module as a proxy "tag" for the module.
 #
 # (We could even abuse `typeof(__module__.eval)` for the tag, though this is a
@@ -85,18 +86,20 @@ end
 _cachename = Symbol("#_RuntimeGeneratedFunctions_cache")
 _tagname = Symbol("#_RuntimeGeneratedFunctions_ModTag")
 
-function _cache_body(moduletag, id, body)
-    getfield(parentmodule(moduletag), _cachename)[id] = body
+function _cache_self(moduletag, id, f)
+    # Use a WeakRef to allow `f` to be garbage collected. (After GC the cache
+    # will still contain an empty entry with key `id`.)
+    getfield(parentmodule(moduletag), _cachename)[id] = WeakRef(f)
 end
 
-function _lookup_body(moduletag, id)
-    getfield(parentmodule(moduletag), _cachename)[id]
+function _lookup_self(moduletag, id)
+    getfield(parentmodule(moduletag), _cachename)[id].value
 end
 
 function _ensure_cache_exists!(mod)
     if !isdefined(mod, _cachename)
         mod.eval(quote
-            const $_cachename = Dict{Tuple,Expr}()
+            const $_cachename = Dict()
             struct $_tagname
             end
         end)
