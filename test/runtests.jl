@@ -80,3 +80,11 @@ using RGFPrecompTest
 
 @test RGFPrecompTest.f(1,2) == 3
 
+# Test that RuntimeGeneratedFunction with identical body expressions (but
+# allocated separately) don't clobber each other when one is GC'd.
+f_gc = @RuntimeGeneratedFunction(Base.remove_linenums!(:((x,y)->x+y+100001)))
+let
+    @RuntimeGeneratedFunction(Base.remove_linenums!(:((x,y)->x+y+100001)))
+end
+GC.gc()
+@test f_gc(1,-1) == 100001

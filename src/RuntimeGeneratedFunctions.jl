@@ -10,15 +10,14 @@ export @RuntimeGeneratedFunction
 
 This type should be constructed via the macro @RuntimeGeneratedFunction.
 """
-mutable struct RuntimeGeneratedFunction{moduletag,id,argnames}
+struct RuntimeGeneratedFunction{moduletag,id,argnames}
     body::Expr
     function RuntimeGeneratedFunction(moduletag, ex)
-        id = expr2bytes(ex)
         def = splitdef(ex)
         args, body = normalize_args(def[:args]), def[:body]
-        f = new{moduletag,id,Tuple(args)}(body)
-        _cache_self(moduletag, id, f)
-        return f
+        id = expr2bytes(body)
+        cached_body = _cache_body(moduletag, id, body)
+        new{moduletag,id,Tuple(args)}(cached_body)
     end
 end
 
@@ -62,18 +61,20 @@ end
 
 @inline @generated function generated_callfunc(f::RuntimeGeneratedFunction{moduletag, id, argnames}, __args...) where {moduletag,id,argnames}
     setup = (:($(argnames[i]) = @inbounds __args[$i]) for i in 1:length(argnames))
-    f_value = _lookup_self(moduletag, id)
+    body = _lookup_body(moduletag, id)
+    @assert body !== nothing
     quote
         $(setup...)
-        $(f_value.body)
+        $(body)
     end
 end
 
-### Function caching and lookup
+### Body caching and lookup
 #
-# Looking up a RuntimeGeneratedFunction based on the id is a little complicated
-# because we want the `id=>func` mapping to survive precompilation. This means
-# we need to store the mapping created by a module in that module itself.
+# Looking up the body of a RuntimeGeneratedFunction based on the id is a little
+# complicated because we want the `id=>body` mapping to survive precompilation.
+# This means we need to store the mapping created by a module in that module
+# itself.
 #
 # For that, we need a way to lookup the correct module from an instance of
 # RuntimeGeneratedFunction. Modules can't be type parameters, but we can use
@@ -86,13 +87,29 @@ end
 _cachename = Symbol("#_RuntimeGeneratedFunctions_cache")
 _tagname = Symbol("#_RuntimeGeneratedFunctions_ModTag")
 
-function _cache_self(moduletag, id, f)
-    # Use a WeakRef to allow `f` to be garbage collected. (After GC the cache
-    # will still contain an empty entry with key `id`.)
-    getfield(parentmodule(moduletag), _cachename)[id] = WeakRef(f)
+function _cache_body(moduletag, id, body)
+    cache = getfield(parentmodule(moduletag), _cachename)
+    # Caching is tricky when `id` is the same for different AST instances:
+    #
+    # Tricky case #1: If a function body with the same `id` was cached
+    # previously, we need to use that older instance of the body AST as the
+    # canonical one rather than `body`. This ensures the lifetime of the
+    # body in the cache will always cover the lifetime of the parent
+    # `RuntimeGeneratedFunction`s when they share the same `id`.
+    #
+    # Tricky case #2: Unless we hold a separate reference to
+    # `cache[id].value`, the GC can collect it (causing it to become
+    # `nothing`). So root it in a local variable first.
+    #
+    cached_body = haskey(cache, id) ? cache[id].value : nothing
+    cached_body = cached_body !== nothing ? cached_body : body
+    # Use a WeakRef to allow `body` to be garbage collected. (After GC, the
+    # cache will still contain an empty entry with key `id`.)
+    cache[id] = WeakRef(cached_body)
+    return cached_body
 end
 
-function _lookup_self(moduletag, id)
+function _lookup_body(moduletag, id)
     getfield(parentmodule(moduletag), _cachename)[id].value
 end
 
