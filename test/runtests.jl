@@ -88,3 +88,22 @@ let
 end
 GC.gc()
 @test f_gc(1,-1) == 100001
+
+# Test that threaded use works
+tasks = []
+for k=1:4
+    let k=k
+        t = Threads.@spawn begin
+            r = Bool[]
+            for i=1:100
+                f = @RuntimeGeneratedFunction(Base.remove_linenums!(:((x,y)->x+y+$i*$k)))
+                x = 1; y = 2;
+                push!(r, f(x,y) == x + y + i*k)
+            end
+            r
+        end
+        push!(tasks, t)
+    end
+end
+@test all(all.(fetch.(tasks)))
+
