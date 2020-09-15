@@ -84,42 +84,53 @@ end
 # little non-robust to weird special cases like Main.eval being
 # Base.MainInclude.eval.)
 
+# It appears we can't use a ReentrantLock here, as contention seems to lead to
+# deadlock. Perhaps because it triggers a task switch while compiling the
+# @generated function.
+_cache_lock = Threads.SpinLock()
 _cachename = Symbol("#_RuntimeGeneratedFunctions_cache")
 _tagname = Symbol("#_RuntimeGeneratedFunctions_ModTag")
 
 function _cache_body(moduletag, id, body)
-    cache = getfield(parentmodule(moduletag), _cachename)
-    # Caching is tricky when `id` is the same for different AST instances:
-    #
-    # Tricky case #1: If a function body with the same `id` was cached
-    # previously, we need to use that older instance of the body AST as the
-    # canonical one rather than `body`. This ensures the lifetime of the
-    # body in the cache will always cover the lifetime of the parent
-    # `RuntimeGeneratedFunction`s when they share the same `id`.
-    #
-    # Tricky case #2: Unless we hold a separate reference to
-    # `cache[id].value`, the GC can collect it (causing it to become
-    # `nothing`). So root it in a local variable first.
-    #
-    cached_body = haskey(cache, id) ? cache[id].value : nothing
-    cached_body = cached_body !== nothing ? cached_body : body
-    # Use a WeakRef to allow `body` to be garbage collected. (After GC, the
-    # cache will still contain an empty entry with key `id`.)
-    cache[id] = WeakRef(cached_body)
-    return cached_body
+    lock(_cache_lock) do
+        cache = getfield(parentmodule(moduletag), _cachename)
+        # Caching is tricky when `id` is the same for different AST instances:
+        #
+        # Tricky case #1: If a function body with the same `id` was cached
+        # previously, we need to use that older instance of the body AST as the
+        # canonical one rather than `body`. This ensures the lifetime of the
+        # body in the cache will always cover the lifetime of the parent
+        # `RuntimeGeneratedFunction`s when they share the same `id`.
+        #
+        # Tricky case #2: Unless we hold a separate reference to
+        # `cache[id].value`, the GC can collect it (causing it to become
+        # `nothing`). So root it in a local variable first.
+        #
+        cached_body = haskey(cache, id) ? cache[id].value : nothing
+        cached_body = cached_body !== nothing ? cached_body : body
+        # Use a WeakRef to allow `body` to be garbage collected. (After GC, the
+        # cache will still contain an empty entry with key `id`.)
+        cache[id] = WeakRef(cached_body)
+        return cached_body
+    end
 end
 
 function _lookup_body(moduletag, id)
-    getfield(parentmodule(moduletag), _cachename)[id].value
+    lock(_cache_lock) do
+        cache = getfield(parentmodule(moduletag), _cachename)
+        cache[id].value
+    end
 end
 
 function _ensure_cache_exists!(mod)
-    if !isdefined(mod, _cachename)
-        mod.eval(quote
-            const $_cachename = Dict()
-            struct $_tagname
-            end
-        end)
+    lock(_cache_lock) do
+        if !isdefined(mod, _cachename)
+            mod.eval(quote
+                const $_cachename = Dict()
+                struct $_tagname
+                end
+            end)
+        end
     end
 end
 
