@@ -122,3 +122,8 @@ end
 
 @test GlobalsTest.f(2) == 42
 
+@test_throws ErrorException @eval(module NotInitTest
+    using RuntimeGeneratedFunctions
+    # RuntimeGeneratedFunctions.init(@__MODULE__) # <-- missing
+    f = @RuntimeGeneratedFunction(:(x->x+y))
+end)
