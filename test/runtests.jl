@@ -107,3 +107,16 @@ for k=1:4
 end
 @test all(all.(fetch.(tasks)))
 
+
+# Test that globals are resolved within the correct scope
+
+module GlobalsTest
+
+using RuntimeGeneratedFunctions
+
+@RuntimeGeneratedFunction __init__
+y = 10
+f = @RuntimeGeneratedFunction(:(x->x+y))
+
+end
+
