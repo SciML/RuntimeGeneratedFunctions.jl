@@ -1,6 +1,8 @@
 using RuntimeGeneratedFunctions, BenchmarkTools
 using Test
 
+RuntimeGeneratedFunctions.init(@__MODULE__)
+
 function f(_du,_u,_p,_t)
     @inbounds _du[1] = _u[1]
     @inbounds _du[2] = _u[2]
@@ -111,12 +113,12 @@ end
 # Test that globals are resolved within the correct scope
 
 module GlobalsTest
+    using RuntimeGeneratedFunctions
+    RuntimeGeneratedFunctions.init(@__MODULE__)
 
-using RuntimeGeneratedFunctions
-
-@RuntimeGeneratedFunction __init__
-y = 10
-f = @RuntimeGeneratedFunction(:(x->x+y))
-
+    y = 40
+    f = @RuntimeGeneratedFunction(:(x->x+y))
 end
+
+@test GlobalsTest.f(2) == 42
 

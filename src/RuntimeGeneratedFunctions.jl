@@ -32,12 +32,12 @@ then calling the resulting function. The differences are:
 * The result is not a named generic function, and doesn't participate in
   generic function dispatch; it's more like a callable method.
 
-You need to use the special form `@RuntimeGeneratedFunction __init__` a single time
-at the top level of your module before any other uses of the macro.
+You need to use `RuntimeGeneratedFunctions.init(your_module)` a single time at
+the top level of `your_module` before any other uses of the macro.
 
 # Examples
 ```
-@RuntimeGeneratedFunction __init__ # Required once per module
+RuntimeGeneratedFunctions.init(@__MODULE__) # Required at module top-level
 
 function foo()
     expression = :((x,y)->x+y+1) # May be generated dynamically
@@ -47,19 +47,15 @@ end
 ```
 """
 macro RuntimeGeneratedFunction(ex)
-    if ex === :__init__
-        _init_cache!(__module__)
-    else
-        quote
-            if !($(esc(:(@isdefined($_tagname)))))
-                error("""You must use `@RuntimeGeneratedFunction __init__` at module
-                         top level before using runtime generated functions""")
-            end
-            RuntimeGeneratedFunction(
-                $(esc(_tagname)),
-                $(esc(ex))
-            )
+    quote
+        if !($(esc(:(@isdefined($_tagname)))))
+            error("""You must use `RuntimeGeneratedFunctions.init(@__MODULE__)` at module
+                     top level before using runtime generated functions""")
         end
+        RuntimeGeneratedFunction(
+            $(esc(_tagname)),
+            $(esc(ex))
+        )
     end
 end
 
@@ -138,7 +134,13 @@ function _lookup_body(moduletag, id)
     end
 end
 
-function _init_cache!(mod)
+"""
+    RuntimeGeneratedFunctions.init(mod)
+
+Use this at top level to set up your module `mod` before using
+`@RuntimeGeneratedFunction`.
+"""
+function init(mod)
     lock(_cache_lock) do
         if !isdefined(mod, _cachename)
             mod.eval(quote
