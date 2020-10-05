@@ -16,6 +16,9 @@ Credit to Chris Foster (@c4tf) for the implementation idea.
 ## Example
 
 ```julia
+using RuntimeGeneratedFunctions
+RuntimeGeneratedFunctions.init(@__MODULE__)
+
 function no_worldage()
     ex = :(function f(_du,_u,_p,_t)
         @inbounds _du[1] = _u[1]
