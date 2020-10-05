@@ -1,6 +1,8 @@
 using RuntimeGeneratedFunctions, BenchmarkTools
 using Test
 
+RuntimeGeneratedFunctions.init(@__MODULE__)
+
 function f(_du,_u,_p,_t)
     @inbounds _du[1] = _u[1]
     @inbounds _du[2] = _u[2]
@@ -107,3 +109,21 @@ for k=1:4
 end
 @test all(all.(fetch.(tasks)))
 
+
+# Test that globals are resolved within the correct scope
+
+module GlobalsTest
+    using RuntimeGeneratedFunctions
+    RuntimeGeneratedFunctions.init(@__MODULE__)
+
+    y = 40
+    f = @RuntimeGeneratedFunction(:(x->x+y))
+end
+
+@test GlobalsTest.f(2) == 42
+
+@test_throws ErrorException @eval(module NotInitTest
+    using RuntimeGeneratedFunctions
+    # RuntimeGeneratedFunctions.init(@__MODULE__) # <-- missing
+    f = @RuntimeGeneratedFunction(:(x->x+y))
+end)

@@ -32,8 +32,13 @@ then calling the resulting function. The differences are:
 * The result is not a named generic function, and doesn't participate in
   generic function dispatch; it's more like a callable method.
 
+You need to use `RuntimeGeneratedFunctions.init(your_module)` a single time at
+the top level of `your_module` before any other uses of the macro.
+
 # Examples
 ```
+RuntimeGeneratedFunctions.init(@__MODULE__) # Required at module top-level
+
 function foo()
     expression = :((x,y)->x+y+1) # May be generated dynamically
     f = @RuntimeGeneratedFunction(expression)
@@ -42,8 +47,11 @@ end
 ```
 """
 macro RuntimeGeneratedFunction(ex)
-    _ensure_cache_exists!(__module__)
     quote
+        if !($(esc(:(@isdefined($_tagname)))))
+            error("""You must use `RuntimeGeneratedFunctions.init(@__MODULE__)` at module
+                     top level before using runtime generated functions""")
+        end
         RuntimeGeneratedFunction(
             $(esc(_tagname)),
             $(esc(ex))
@@ -59,7 +67,11 @@ end
 
 (f::RuntimeGeneratedFunction)(args::Vararg{Any,N}) where N = generated_callfunc(f, args...)
 
-@inline @generated function generated_callfunc(f::RuntimeGeneratedFunction{moduletag, id, argnames}, __args...) where {moduletag,id,argnames}
+# We'll generate a method of this function in every module which wants to use
+# @RuntimeGeneratedFunction
+function generated_callfunc end
+
+function generated_callfunc_body(moduletag, id, argnames, __args)
     setup = (:($(argnames[i]) = @inbounds __args[$i]) for i in 1:length(argnames))
     body = _lookup_body(moduletag, id)
     @assert body !== nothing
@@ -122,12 +134,33 @@ function _lookup_body(moduletag, id)
     end
 end
 
-function _ensure_cache_exists!(mod)
+"""
+    RuntimeGeneratedFunctions.init(mod)
+
+Use this at top level to set up your module `mod` before using
+`@RuntimeGeneratedFunction`.
+"""
+function init(mod)
     lock(_cache_lock) do
         if !isdefined(mod, _cachename)
             mod.eval(quote
                 const $_cachename = Dict()
                 struct $_tagname
+                end
+
+                # We create method of `generated_callfunc` in the user's module
+                # so that any global symbols within the body will be looked up
+                # in the user's module scope.
+                #
+                # This is straightforward but clunky.  A neater solution should
+                # be to explicitly expand in the user's module and return a
+                # CodeInfo from `generated_callfunc`, but it seems we'd need
+                # `jl_expand_and_resolve` which doesn't exist until Julia 1.3
+                # or so. See:
+                #   https://github.com/JuliaLang/julia/pull/32902
+                #   https://github.com/NHDaly/StagedFunctions.jl/blob/master/src/StagedFunctions.jl#L30
+                @inline @generated function $RuntimeGeneratedFunctions.generated_callfunc(f::$RuntimeGeneratedFunctions.RuntimeGeneratedFunction{$_tagname, id, argnames}, __args...) where {id,argnames}
+                    $RuntimeGeneratedFunctions.generated_callfunc_body($_tagname, id, argnames, __args)
                 end
             end)
         end
