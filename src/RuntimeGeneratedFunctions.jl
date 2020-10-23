@@ -21,6 +21,15 @@ struct RuntimeGeneratedFunction{moduletag,id,argnames}
     end
 end
 
+function Base.show(io::IO, ::Type{<:RuntimeGeneratedFunction{mod,id,arg}}) where {mod,id,arg}
+    print(io, "RuntimeGeneratedFunction{$arg}")
+end
+
+# don't override typeof
+function Base.show(io::IO, ::MIME"text/plain", ::Type{<:RuntimeGeneratedFunction{mod,id,arg}}) where {mod,id,arg}
+    print(io, "RuntimeGeneratedFunction{$mod, $id, $arg}")
+end
+
 """
     @RuntimeGeneratedFunction(function_expression)
 
