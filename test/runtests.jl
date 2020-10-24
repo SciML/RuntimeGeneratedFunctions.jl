@@ -31,6 +31,8 @@ f1 = @RuntimeGeneratedFunction(ex1)
 f2 = @RuntimeGeneratedFunction(ex2)
 f3 = @RuntimeGeneratedFunction(ex3)
 
+@test f1 isa Function
+
 du = rand(2)
 u = rand(2)
 p = nothing
