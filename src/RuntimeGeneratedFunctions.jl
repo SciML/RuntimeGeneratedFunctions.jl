@@ -10,14 +10,14 @@ export @RuntimeGeneratedFunction
 
 This type should be constructed via the macro @RuntimeGeneratedFunction.
 """
-struct RuntimeGeneratedFunction{moduletag,id,argnames}
+struct RuntimeGeneratedFunction{argnames,moduletag,id}
     body::Expr
     function RuntimeGeneratedFunction(moduletag, ex)
         def = splitdef(ex)
         args, body = normalize_args(def[:args]), def[:body]
-        id = expr2bytes(body)
+        id = expr_to_id(body)
         cached_body = _cache_body(moduletag, id, body)
-        new{moduletag,id,Tuple(args)}(cached_body)
+        new{Tuple(args),moduletag,id}(cached_body)
     end
 end
 
@@ -59,7 +59,7 @@ macro RuntimeGeneratedFunction(ex)
     end
 end
 
-function Base.show(io::IO, f::RuntimeGeneratedFunction{moduletag, id, argnames}) where {moduletag,id,argnames}
+function Base.show(io::IO, f::RuntimeGeneratedFunction{argnames, moduletag, id}) where {argnames,moduletag,id}
     mod = parentmodule(moduletag)
     func_expr = Expr(:->, Expr(:tuple, argnames...), f.body)
     print(io, "RuntimeGeneratedFunction(#=in $mod=#, ", repr(func_expr), ")")
@@ -71,7 +71,7 @@ end
 # @RuntimeGeneratedFunction
 function generated_callfunc end
 
-function generated_callfunc_body(moduletag, id, argnames, __args)
+function generated_callfunc_body(argnames, moduletag, id, __args)
     setup = (:($(argnames[i]) = @inbounds __args[$i]) for i in 1:length(argnames))
     body = _lookup_body(moduletag, id)
     @assert body !== nothing
@@ -101,7 +101,7 @@ end
 # @generated function.
 _cache_lock = Threads.SpinLock()
 _cachename = Symbol("#_RuntimeGeneratedFunctions_cache")
-_tagname = Symbol("#_RuntimeGeneratedFunctions_ModTag")
+_tagname = Symbol("#_RGF_ModTag")
 
 function _cache_body(moduletag, id, body)
     lock(_cache_lock) do
@@ -159,8 +159,8 @@ function init(mod)
                 # or so. See:
                 #   https://github.com/JuliaLang/julia/pull/32902
                 #   https://github.com/NHDaly/StagedFunctions.jl/blob/master/src/StagedFunctions.jl#L30
-                @inline @generated function $RuntimeGeneratedFunctions.generated_callfunc(f::$RuntimeGeneratedFunctions.RuntimeGeneratedFunction{$_tagname, id, argnames}, __args...) where {id,argnames}
-                    $RuntimeGeneratedFunctions.generated_callfunc_body($_tagname, id, argnames, __args)
+                @inline @generated function $RuntimeGeneratedFunctions.generated_callfunc(f::$RuntimeGeneratedFunctions.RuntimeGeneratedFunction{argnames, $_tagname, id}, __args...) where {argnames,id}
+                    $RuntimeGeneratedFunctions.generated_callfunc_body(argnames, $_tagname, id, __args)
                 end
             end)
         end
@@ -177,10 +177,10 @@ function normalize_args(arg::Expr)
     arg.args[1]
 end
 
-function expr2bytes(ex)
+function expr_to_id(ex)
     io = IOBuffer()
     Serialization.serialize(io, ex)
-    return Tuple(sha512(take!(io)))
+    return Tuple(reinterpret(UInt32, sha1(take!(io))))
 end
 
 end
