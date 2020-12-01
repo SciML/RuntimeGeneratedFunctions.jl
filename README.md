@@ -1,6 +1,6 @@
 # RuntimeGeneratedFunctions.jl
 
-[![Build Status](https://travis-ci.com/SciML/RuntimeGeneratedFunctions.jl.svg?branch=master)](https://travis-ci.com/SciML/RuntimeGeneratedFunctions.jl)
+[![Build Status](https://github.com/SciML/RuntimeGeneratedFunctions.jl/workflows/CI/badge.svg)](https://github.com/SciML/RuntimeGeneratedFunctions.jl/actions?query=workflow%3ACI)
 
 `RuntimeGeneratedFunctions` are functions generated at runtime without world-age
 issues and with the full performance of a standard Julia anonymous function. This
