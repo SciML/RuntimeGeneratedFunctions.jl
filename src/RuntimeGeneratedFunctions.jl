@@ -46,14 +46,31 @@ struct RuntimeGeneratedFunction{argnames,moduletag,id} <: Function
         new{Tuple(args),moduletag,id}(cached_body)
     end
 end
-
-
 macro RuntimeGeneratedFunction(ex)
     Base.depwarn("`@RuntimeGeneratedFunction(ex)` is deprecated, use `RuntimeGeneratedFunction(@__MODULE__, ex)` instead.", :RuntimeGeneratedFunction)
     quote
         RuntimeGeneratedFunction(@__MODULE__, $(esc(ex)))
     end
 end
+
+# macro RuntimeGeneratedFunction(mod, ex)
+#     quote
+#         if !($(esc(isdefined))($(esc(mod)), _tagname))
+#             error("""You must use `RuntimeGeneratedFunctions.init(@__MODULE__)` at module
+#                      top level before using runtime generated functions""")
+#         end
+#         RuntimeGeneratedFunction(
+#             $(esc(getfield))($(esc(mod)), _tagname),
+#             $(esc(ex))
+#         )
+#     end
+# end
+
+# macro RuntimeGeneratedFunction(ex)
+#     quote
+#         @RuntimeGeneratedFunction($__module__, $(esc(ex)))
+#     end
+# end
 
 function Base.show(io::IO, f::RuntimeGeneratedFunction{argnames, moduletag, id}) where {argnames,moduletag,id}
     mod = parentmodule(moduletag)
