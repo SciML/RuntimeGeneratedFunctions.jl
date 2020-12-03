@@ -8,6 +8,10 @@ module RGFPrecompTest
     f2 = RuntimeGeneratedFunction(@__MODULE__, :((x,y)->x+y))
     # f2 = @RuntimeGeneratedFunction(@__MODULE__, :((x,y)->x-y+z))
 
+    function build_RGF(ex, mod=@__MODULE__)
+        @RuntimeGeneratedFunction(mod, ex)
+    end
+
     module Submodule
         using RuntimeGeneratedFunctions
         RuntimeGeneratedFunctions.init(@__MODULE__)
