@@ -82,7 +82,23 @@ end
 push!(LOAD_PATH, joinpath(@__DIR__, "precomp"))
 using RGFPrecompTest
 
-@test RGFPrecompTest.f(1,2) == 3
+# Check that function tags are kept in per-module caches
+@test length(getfield(RGFPrecompTest, RuntimeGeneratedFunctions._cachename)) == 3
+@test length(getfield(RGFPrecompTest.Submodule, RuntimeGeneratedFunctions._cachename)) == 1
+
+# Functions defined in precompiled module
+@test parentmodule(typeof(RGFPrecompTest.f).parameters[2]) == RGFPrecompTest
+@test parentmodule(typeof(RGFPrecompTest.f2).parameters[2]) == RGFPrecompTest
+@test RGFPrecompTest.f(1,2) == 103
+@test RGFPrecompTest.f2(2,3) == 99
+
+# Function defined in precompiled submodule
+@test parentmodule(typeof(RGFPrecompTest.Submodule.f).parameters[2]) == RGFPrecompTest.Submodule
+@test RGFPrecompTest.Submodule.f(3,4) == 212
+
+# Function defined in precompiled submodule but within parent module scope
+@test parentmodule(typeof(RGFPrecompTest.Submodule.f2).parameters[2]) == RGFPrecompTest
+@test RGFPrecompTest.Submodule.f2(5,5) == 101
 
 # Test that RuntimeGeneratedFunction with identical body expressions (but
 # allocated separately) don't clobber each other when one is GC'd.
