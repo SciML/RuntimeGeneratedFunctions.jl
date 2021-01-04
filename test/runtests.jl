@@ -72,9 +72,9 @@ end
 @test no_worldage() === nothing
 
 # Test show()
-@test sprint(show, @RuntimeGeneratedFunction(Base.remove_linenums!(:((x,y)->x+y+1)))) ==
+@test sprint(show, MIME"text/plain"(), @RuntimeGeneratedFunction(Base.remove_linenums!(:((x,y)->x+y+1)))) ==
      """
-     RuntimeGeneratedFunction(#=in $(@__MODULE__)=#, :((x, y)->begin
+     RuntimeGeneratedFunction(#=in $(@__MODULE__)=#, #=using $(@__MODULE__)=#, :((x, y)->begin
                x + y + 1
            end))"""
 
@@ -118,11 +118,14 @@ module GlobalsTest
     using RuntimeGeneratedFunctions
     RuntimeGeneratedFunctions.init(@__MODULE__)
 
-    y = 40
-    f = @RuntimeGeneratedFunction(:(x->x+y))
+    y_in_GlobalsTest = 40
+    f = @RuntimeGeneratedFunction(:(x->x + y_in_GlobalsTest))
 end
 
 @test GlobalsTest.f(2) == 42
+
+f_outside = @RuntimeGeneratedFunction(GlobalsTest, :(x->x + y_in_GlobalsTest))
+@test f_outside(2) == 42
 
 @test_throws ErrorException @eval(module NotInitTest
     using RuntimeGeneratedFunctions
