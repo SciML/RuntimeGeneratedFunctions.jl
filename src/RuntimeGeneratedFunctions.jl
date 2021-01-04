@@ -2,16 +2,31 @@ module RuntimeGeneratedFunctions
 
 using ExprTools, Serialization, SHA
 
-export RuntimeGeneratedFunction, @RuntimeGeneratedFunction
+export @RuntimeGeneratedFunction
 
 
 """
-    RuntimeGeneratedFunction(module, function_expression)
+    RuntimeGeneratedFunction
 
-Construct a function from `function_expression` in the scope of `module` which
-can be called immediately without world age problems. Somewhat like using
-`eval(function_expression)` and then calling the resulting function. The
-differences are:
+This type should be constructed via the macro @RuntimeGeneratedFunction.
+"""
+struct RuntimeGeneratedFunction{argnames,moduletag,id} <: Function
+    body::Expr
+    function RuntimeGeneratedFunction(moduletag, ex)
+        def = splitdef(ex)
+        args, body = normalize_args(def[:args]), def[:body]
+        id = expr_to_id(body)
+        cached_body = _cache_body(moduletag, id, body)
+        new{Tuple(args),moduletag,id}(cached_body)
+    end
+end
+
+"""
+    @RuntimeGeneratedFunction(function_expression)
+
+Construct a function from `function_expression` which can be called immediately
+without world age problems. Somewhat like using `eval(function_expression)` and
+then calling the resulting function. The differences are:
 
 * The result can be called immediately (immune to world age errors)
 * The result is not a named generic function, and doesn't participate in
@@ -26,32 +41,21 @@ RuntimeGeneratedFunctions.init(@__MODULE__) # Required at module top-level
 
 function foo()
     expression = :((x,y)->x+y+1) # May be generated dynamically
-    f = RuntimeGeneratedFunction(@__MODULE__, expression)
+    f = @RuntimeGeneratedFunction(expression)
     f(1,2) # May be called immediately
 end
 ```
 """
-struct RuntimeGeneratedFunction{argnames,moduletag,id} <: Function
-    body::Expr
-    function RuntimeGeneratedFunction(mod::Module, ex)
-        if !isdefined(mod, _tagname)
+macro RuntimeGeneratedFunction(ex)
+    quote
+        if !($(esc(:(@isdefined($_tagname)))))
             error("""You must use `RuntimeGeneratedFunctions.init(@__MODULE__)` at module
                      top level before using runtime generated functions""")
         end
-        moduletag = getfield(mod, _tagname)
-        def = splitdef(ex)
-        args, body = normalize_args(def[:args]), def[:body]
-        id = expr_to_id(body)
-        cached_body = _cache_body(moduletag, id, body)
-        new{Tuple(args),moduletag,id}(cached_body)
-    end
-end
-
-
-macro RuntimeGeneratedFunction(ex)
-    Base.depwarn("`@RuntimeGeneratedFunction(ex)` is deprecated, use `RuntimeGeneratedFunction(@__MODULE__, ex)` instead.", :RuntimeGeneratedFunction)
-    quote
-        RuntimeGeneratedFunction(@__MODULE__, $(esc(ex)))
+        RuntimeGeneratedFunction(
+            $(esc(_tagname)),
+            $(esc(ex))
+        )
     end
 end
 
@@ -64,7 +68,7 @@ end
 (f::RuntimeGeneratedFunction)(args::Vararg{Any,N}) where N = generated_callfunc(f, args...)
 
 # We'll generate a method of this function in every module which wants to use
-# RuntimeGeneratedFunction
+# @RuntimeGeneratedFunction
 function generated_callfunc end
 
 function generated_callfunc_body(argnames, moduletag, id, __args)
@@ -134,7 +138,7 @@ end
     RuntimeGeneratedFunctions.init(mod)
 
 Use this at top level to set up your module `mod` before using
-`RuntimeGeneratedFunction(mod, ...)`.
+`@RuntimeGeneratedFunction`.
 """
 function init(mod)
     lock(_cache_lock) do
