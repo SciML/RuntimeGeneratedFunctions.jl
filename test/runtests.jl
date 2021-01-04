@@ -27,9 +27,9 @@ ex3 = :(function (_du::T,_u::Vector{E},_p::P,_t::Any) where {T<:Vector,E,P}
     nothing
 end)
 
-f1 = RuntimeGeneratedFunction(@__MODULE__, ex1)
-f2 = RuntimeGeneratedFunction(@__MODULE__, ex2)
-f3 = RuntimeGeneratedFunction(@__MODULE__, ex3)
+f1 = @RuntimeGeneratedFunction(ex1)
+f2 = @RuntimeGeneratedFunction(ex2)
+f3 = @RuntimeGeneratedFunction(ex3)
 
 @test f1 isa Function
 
@@ -62,7 +62,7 @@ function no_worldage()
         @inbounds _du[2] = _u[2]
         nothing
     end)
-    f1 = RuntimeGeneratedFunction(@__MODULE__, ex)
+    f1 = @RuntimeGeneratedFunction(ex)
     du = rand(2)
     u = rand(2)
     p = nothing
@@ -72,9 +72,9 @@ end
 @test no_worldage() === nothing
 
 # Test show()
-@test sprint(show, RuntimeGeneratedFunction(@__MODULE__, Base.remove_linenums!(:((x,y)->x+y+1)))) ==
+@test sprint(show, MIME"text/plain"(), @RuntimeGeneratedFunction(Base.remove_linenums!(:((x,y)->x+y+1)))) ==
      """
-     RuntimeGeneratedFunction(#=in $(@__MODULE__)=#, :((x, y)->begin
+     RuntimeGeneratedFunction(#=in $(@__MODULE__)=#, #=using $(@__MODULE__)=#, :((x, y)->begin
                x + y + 1
            end))"""
 
@@ -86,9 +86,9 @@ using RGFPrecompTest
 
 # Test that RuntimeGeneratedFunction with identical body expressions (but
 # allocated separately) don't clobber each other when one is GC'd.
-f_gc = RuntimeGeneratedFunction(@__MODULE__, Base.remove_linenums!(:((x,y)->x+y+100001)))
+f_gc = @RuntimeGeneratedFunction(Base.remove_linenums!(:((x,y)->x+y+100001)))
 let
-    RuntimeGeneratedFunction(@__MODULE__, Base.remove_linenums!(:((x,y)->x+y+100001)))
+    @RuntimeGeneratedFunction(Base.remove_linenums!(:((x,y)->x+y+100001)))
 end
 GC.gc()
 @test f_gc(1,-1) == 100001
@@ -100,7 +100,7 @@ for k=1:4
         t = Threads.@spawn begin
             r = Bool[]
             for i=1:100
-                f = RuntimeGeneratedFunction(@__MODULE__, Base.remove_linenums!(:((x,y)->x+y+$i*$k)))
+                f = @RuntimeGeneratedFunction(Base.remove_linenums!(:((x,y)->x+y+$i*$k)))
                 x = 1; y = 2;
                 push!(r, f(x,y) == x + y + i*k)
             end
@@ -118,14 +118,17 @@ module GlobalsTest
     using RuntimeGeneratedFunctions
     RuntimeGeneratedFunctions.init(@__MODULE__)
 
-    y = 40
-    f = RuntimeGeneratedFunction(@__MODULE__, :(x->x+y))
+    y_in_GlobalsTest = 40
+    f = @RuntimeGeneratedFunction(:(x->x + y_in_GlobalsTest))
 end
 
 @test GlobalsTest.f(2) == 42
 
+f_outside = @RuntimeGeneratedFunction(GlobalsTest, :(x->x + y_in_GlobalsTest))
+@test f_outside(2) == 42
+
 @test_throws ErrorException @eval(module NotInitTest
     using RuntimeGeneratedFunctions
     # RuntimeGeneratedFunctions.init(@__MODULE__) # <-- missing
-    f = RuntimeGeneratedFunction(@__MODULE__, :(x->x+y))
+    f = @RuntimeGeneratedFunction(:(x->x+y))
 end)

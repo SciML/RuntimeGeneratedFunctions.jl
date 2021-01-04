@@ -2,16 +2,32 @@ module RuntimeGeneratedFunctions
 
 using ExprTools, Serialization, SHA
 
-export RuntimeGeneratedFunction, @RuntimeGeneratedFunction
+export @RuntimeGeneratedFunction
 
 
 """
-    RuntimeGeneratedFunction(module, function_expression)
+    RuntimeGeneratedFunction
 
-Construct a function from `function_expression` in the scope of `module` which
-can be called immediately without world age problems. Somewhat like using
-`eval(function_expression)` and then calling the resulting function. The
-differences are:
+This type should be constructed via the macro @RuntimeGeneratedFunction.
+"""
+struct RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id} <: Function
+    body::Expr
+    function RuntimeGeneratedFunction(cache_tag, context_tag, ex)
+        def = splitdef(ex)
+        args, body = normalize_args(def[:args]), def[:body]
+        id = expr_to_id(body)
+        cached_body = _cache_body(cache_tag, id, body)
+        new{Tuple(args), cache_tag, context_tag, id}(cached_body)
+    end
+end
+
+"""
+    @RuntimeGeneratedFunction(function_expression)
+    @RuntimeGeneratedFunction(context_module, function_expression)
+
+Construct a function from `function_expression` which can be called immediately
+without world age problems. Somewhat like using `eval(function_expression)` and
+then calling the resulting function. The differences are:
 
 * The result can be called immediately (immune to world age errors)
 * The result is not a named generic function, and doesn't participate in
@@ -20,56 +36,59 @@ differences are:
 You need to use `RuntimeGeneratedFunctions.init(your_module)` a single time at
 the top level of `your_module` before any other uses of the macro.
 
+If provided, `context_module` is module in which symbols within
+`function_expression` will be looked up. By default this is module in which
+`@RuntimeGeneratedFunction` is expanded.
+
 # Examples
 ```
 RuntimeGeneratedFunctions.init(@__MODULE__) # Required at module top-level
 
 function foo()
     expression = :((x,y)->x+y+1) # May be generated dynamically
-    f = RuntimeGeneratedFunction(@__MODULE__, expression)
+    f = @RuntimeGeneratedFunction(expression)
     f(1,2) # May be called immediately
 end
 ```
 """
-struct RuntimeGeneratedFunction{argnames,moduletag,id} <: Function
-    body::Expr
-    function RuntimeGeneratedFunction(mod::Module, ex)
-        if !isdefined(mod, _tagname)
-            error("""You must use `RuntimeGeneratedFunctions.init(@__MODULE__)` at module
-                     top level before using runtime generated functions""")
-        end
-        moduletag = getfield(mod, _tagname)
-        def = splitdef(ex)
-        args, body = normalize_args(def[:args]), def[:body]
-        id = expr_to_id(body)
-        cached_body = _cache_body(moduletag, id, body)
-        new{Tuple(args),moduletag,id}(cached_body)
-    end
+macro RuntimeGeneratedFunction(code)
+    _RGF_constructor_code(:(@__MODULE__), esc(code))
+end
+macro RuntimeGeneratedFunction(context_module, code)
+    _RGF_constructor_code(esc(context_module), esc(code))
 end
 
-
-macro RuntimeGeneratedFunction(ex)
-    Base.depwarn("`@RuntimeGeneratedFunction(ex)` is deprecated, use `RuntimeGeneratedFunction(@__MODULE__, ex)` instead.", :RuntimeGeneratedFunction)
+function _RGF_constructor_code(context_module, code)
     quote
-        RuntimeGeneratedFunction(@__MODULE__, $(esc(ex)))
+        code = $code
+        cache_module = @__MODULE__
+        context_module = $context_module
+        if #==# !isdefined(cache_module,   $(QuoteNode(_tagname))) ||
+                !isdefined(context_module, $(QuoteNode(_tagname)))
+            init_mods = unique([context_module, cache_module])
+            error("""You must use `RuntimeGeneratedFunctions.init(@__MODULE__)` at module
+                     top level before using runtime generated functions in $init_mods""")
+        end
+        RuntimeGeneratedFunction(cache_module.$_tagname, context_module.$_tagname, $code)
     end
 end
 
-function Base.show(io::IO, f::RuntimeGeneratedFunction{argnames, moduletag, id}) where {argnames,moduletag,id}
-    mod = parentmodule(moduletag)
+function Base.show(io::IO, ::MIME"text/plain", f::RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id}) where {argnames,cache_tag,context_tag,id}
+    cache_mod = parentmodule(cache_tag)
+    context_mod = parentmodule(context_tag)
     func_expr = Expr(:->, Expr(:tuple, argnames...), f.body)
-    print(io, "RuntimeGeneratedFunction(#=in $mod=#, ", repr(func_expr), ")")
+    print(io, "RuntimeGeneratedFunction(#=in $cache_mod=#, #=using $context_mod=#, ", repr(func_expr), ")")
 end
 
 (f::RuntimeGeneratedFunction)(args::Vararg{Any,N}) where N = generated_callfunc(f, args...)
 
 # We'll generate a method of this function in every module which wants to use
-# RuntimeGeneratedFunction
+# @RuntimeGeneratedFunction
 function generated_callfunc end
 
-function generated_callfunc_body(argnames, moduletag, id, __args)
+function generated_callfunc_body(argnames, cache_tag, id, __args)
     setup = (:($(argnames[i]) = @inbounds __args[$i]) for i in 1:length(argnames))
-    body = _lookup_body(moduletag, id)
+    body = _lookup_body(cache_tag, id)
     @assert body !== nothing
     quote
         $(setup...)
@@ -99,9 +118,9 @@ _cache_lock = Threads.SpinLock()
 _cachename = Symbol("#_RuntimeGeneratedFunctions_cache")
 _tagname = Symbol("#_RGF_ModTag")
 
-function _cache_body(moduletag, id, body)
+function _cache_body(cache_tag, id, body)
     lock(_cache_lock) do
-        cache = getfield(parentmodule(moduletag), _cachename)
+        cache = getfield(parentmodule(cache_tag), _cachename)
         # Caching is tricky when `id` is the same for different AST instances:
         #
         # Tricky case #1: If a function body with the same `id` was cached
@@ -123,9 +142,9 @@ function _cache_body(moduletag, id, body)
     end
 end
 
-function _lookup_body(moduletag, id)
+function _lookup_body(cache_tag, id)
     lock(_cache_lock) do
-        cache = getfield(parentmodule(moduletag), _cachename)
+        cache = getfield(parentmodule(cache_tag), _cachename)
         cache[id].value
     end
 end
@@ -134,7 +153,7 @@ end
     RuntimeGeneratedFunctions.init(mod)
 
 Use this at top level to set up your module `mod` before using
-`RuntimeGeneratedFunction(mod, ...)`.
+`@RuntimeGeneratedFunction`.
 """
 function init(mod)
     lock(_cache_lock) do
@@ -155,8 +174,9 @@ function init(mod)
                 # or so. See:
                 #   https://github.com/JuliaLang/julia/pull/32902
                 #   https://github.com/NHDaly/StagedFunctions.jl/blob/master/src/StagedFunctions.jl#L30
-                @inline @generated function $RuntimeGeneratedFunctions.generated_callfunc(f::$RuntimeGeneratedFunctions.RuntimeGeneratedFunction{argnames, $_tagname, id}, __args...) where {argnames,id}
-                    $RuntimeGeneratedFunctions.generated_callfunc_body(argnames, $_tagname, id, __args)
+                @inline @generated function $RuntimeGeneratedFunctions.generated_callfunc(
+                        f::$RuntimeGeneratedFunctions.RuntimeGeneratedFunction{argnames, cache_tag, $_tagname, id}, __args...) where {argnames, cache_tag, id}
+                    $RuntimeGeneratedFunctions.generated_callfunc_body(argnames, cache_tag, id, __args)
                 end
             end)
         end
