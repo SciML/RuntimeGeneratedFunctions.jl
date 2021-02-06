@@ -83,6 +83,7 @@ push!(LOAD_PATH, joinpath(@__DIR__, "precomp"))
 using RGFPrecompTest
 
 @test RGFPrecompTest.f(1,2) == 3
+@test RGFPrecompTest.g(40) == 42
 
 # Test that RuntimeGeneratedFunction with identical body expressions (but
 # allocated separately) don't clobber each other when one is GC'd.
