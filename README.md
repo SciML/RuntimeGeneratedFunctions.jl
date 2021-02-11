@@ -11,9 +11,10 @@ Note that `RuntimeGeneratedFunction` does not handle closures. Please use the
 package for more fixable staged programming. While `GeneralizedGenerated.jl` is
 more powerful, `RuntimeGeneratedFunctions.jl` handles large expressions better.
 
-Credit to Chris Foster (@c4tf) for the implementation idea.
+## Simple Example
 
-## Example
+Here's an example showing how to construct and immediately call a runtime
+generated function:
 
 ```julia
 using RuntimeGeneratedFunctions
@@ -34,3 +35,65 @@ function no_worldage()
 end
 no_worldage()
 ```
+
+## Changing how global symbols are looked up
+
+If you want to use helper functions or global variables from a different
+module within your function expression you'll need to pass a `context_module`
+to the `@RuntimeGeneratedFunction` constructor. For example
+
+```julia
+RuntimeGeneratedFunctions.init(@__MODULE__)
+
+module A
+    using RuntimeGeneratedFunctions
+    RuntimeGeneratedFunctions.init(A)
+    helper_function(x) = x + 1
+end
+
+function g()
+    expression = :(f(x) = helper_function(x))
+    # context module is `A` so that `helper_function` can be found.
+    f = @RuntimeGeneratedFunction(A, expression)
+    @show f(1)
+end
+```
+
+## Precompilation and setting the function expression cache
+
+For technical reasons RuntimeGeneratedFunctions needs to cache the function
+expression in a global variable within some module. This is normally
+transparent to the user, but if the `RuntimeGeneratedFunction` is evaluated
+during module precompilation, the cache module must be explicitly set to the
+module currently being precompiled. This is relevant for helper functions in
+some module which construct a RuntimeGeneratedFunction on behalf of the user.
+For example, in the following code, any third party user of
+`HelperModule.construct_rgf()` user needs to pass their own module as the
+`cache_module` if they want the returned function to work after precompilation:
+
+```julia
+RuntimeGeneratedFunctions.init(@__MODULE__)
+
+# Imagine HelperModule is in a separate package and will be precompiled
+# separately.
+module HelperModule
+    using RuntimeGeneratedFunctions
+    RuntimeGeneratedFunctions.init(HelperModule)
+
+    function construct_rgf(cache_module, context_module, ex)
+        ex = :((x)->$ex^2 + x)
+        RuntimeGeneratedFunction(cache_module, context_module, ex)
+    end
+end
+
+function g()
+    ex = :(x + 1)
+    # Here cache_module is set to the module currently being compiled so that
+    # the returned RGF works with Julia's module precompilation system.
+    HelperModule.construct_rgf(@__MODULE__, @__MODULE__, ex)
+end
+
+f = g()
+@show f(1)
+```
+
