@@ -46,7 +46,7 @@ struct RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id} <: Functio
     body::Expr
     function RuntimeGeneratedFunction(cache_tag, context_tag, ex)
         def = splitdef(ex)
-        args, body = normalize_args(def[:args]), def[:body]
+        args, body = normalize_args(get(def, :args, [])), def[:body]
         id = expr_to_id(body)
         cached_body = _cache_body(cache_tag, id, body)
         new{Tuple(args), cache_tag, context_tag, id}(cached_body)
