@@ -7,9 +7,9 @@ export RuntimeGeneratedFunction, @RuntimeGeneratedFunction
 
 """
     @RuntimeGeneratedFunction(function_expression)
-    @RuntimeGeneratedFunction(context_module, function_expression)
+    @RuntimeGeneratedFunction(context_module, function_expression, opaque_closures=true)
 
-    RuntimeGeneratedFunction(cache_module, context_module, function_expression)
+    RuntimeGeneratedFunction(cache_module, context_module, function_expression; opaque_closures=true)
 
 Construct a function from `function_expression` which can be called immediately
 without world age problems. Somewhat like using `eval(function_expression)` and
@@ -31,6 +31,13 @@ If provided, `context_module` is module in which symbols within
 which is currently being precompiled. Normally this would be set to
 `@__MODULE__` using one of the macro constructors.
 
+If `opaque_closures` is `true`, all closures in `function_expression` are
+converted to
+[opaque closures](https://github.com/JuliaLang/julia/pull/37849#issue-496641229).
+This allows for the use of closures and generators inside the generated function,
+but may not work in all cases due to slightly different semantics. This feature
+requires Julia 1.7.
+
 # Examples
 ```
 RuntimeGeneratedFunctions.init(@__MODULE__) # Required at module top-level
@@ -44,9 +51,13 @@ end
 """
 struct RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id} <: Function
     body::Expr
-    function RuntimeGeneratedFunction(cache_tag, context_tag, ex)
+    function RuntimeGeneratedFunction(cache_tag, context_tag, ex; opaque_closures=true)
         def = splitdef(ex)
         args, body = normalize_args(def[:args]), def[:body]
+        if opaque_closures && isdefined(Base, :Experimental) &&
+            isdefined(Base.Experimental, Symbol("@opaque"))
+            body = closures_to_opaque(body)
+        end
         id = expr_to_id(body)
         cached_body = _cache_body(cache_tag, id, body)
         new{Tuple(args), cache_tag, context_tag, id}(cached_body)
@@ -62,10 +73,16 @@ function _check_rgf_initialized(mods...)
     end
 end
 
-function RuntimeGeneratedFunction(cache_module::Module, context_module::Module, code)
+function RuntimeGeneratedFunction(
+        cache_module::Module, context_module::Module, code; opaque_closures=true,
+    )
     _check_rgf_initialized(cache_module, context_module)
-    RuntimeGeneratedFunction(getfield(cache_module, _tagname),
-                             getfield(context_module, _tagname), code)
+    RuntimeGeneratedFunction(
+        getfield(cache_module, _tagname),
+        getfield(context_module, _tagname),
+        code;
+        opaque_closures = opaque_closures
+    )
 end
 
 macro RuntimeGeneratedFunction(code)
@@ -73,9 +90,12 @@ macro RuntimeGeneratedFunction(code)
         RuntimeGeneratedFunction(@__MODULE__, @__MODULE__, $(esc(code)))
     end
 end
-macro RuntimeGeneratedFunction(context_module, code)
+macro RuntimeGeneratedFunction(context_module, code, opaque_closures=true)
     quote
-        RuntimeGeneratedFunction(@__MODULE__, $(esc(context_module)), $(esc(code)))
+        RuntimeGeneratedFunction(
+            @__MODULE__, $(esc(context_module)), $(esc(code));
+            opaque_closures = $(esc(opaque_closures)),
+        )
     end
 end
 
@@ -207,5 +227,52 @@ function expr_to_id(ex)
     Serialization.serialize(io, ex)
     return Tuple(reinterpret(UInt32, sha1(take!(io))))
 end
+
+@nospecialize
+
+closures_to_opaque(x, _=nothing) = x
+_tconvert(T, x) = Expr(:(::), Expr(:call, GlobalRef(Base, :convert), T, x), T)
+function closures_to_opaque(ex::Expr, return_type=nothing)
+    head, args = ex.head, ex.args
+    fdef = splitdef(ex; throw=false)
+    if fdef !== nothing
+        body = get(fdef, :body, nothing)
+        if haskey(fdef, :rtype)
+            body = _tconvert(fdef[:rtype], closures_to_opaque(body, fdef[:rtype]))
+            delete!(fdef, :rtype)
+        else
+            body = closures_to_opaque(body)
+        end
+        fdef[:head] = :(->)
+        fdef[:body] = body
+        name = get(fdef, :name, nothing)
+        name !== nothing && delete!(fdef, :name)
+        _ex = Expr(:opaque_closure, combinedef(fdef))
+        # TODO: emit named opaque closure for better stacktraces
+        # (ref https://github.com/JuliaLang/julia/pull/40242)
+        if name !== nothing
+            name isa Symbol ||
+                error("Unsupported function definition `$ex` in RuntimeGeneratedFunction.")
+            _ex = Expr(:(=), name, _ex)
+        end
+        return _ex
+    elseif head === :generator
+        f_args = Expr(:tuple, Any[x.args[1] for x in args[2:end]]...)
+        iters = Any[x.args[2] for x in args[2:end]]
+        return Expr(
+            :call,
+            GlobalRef(Base, :Generator),
+            closures_to_opaque(Expr(:(->), f_args, args[1])),
+            iters...,
+        )
+    elseif head === :opaque_closure
+        return closures_to_opaque(args[1])
+    elseif head === :return && return_type !== nothing
+        return Expr(:return, _tconvert(return_type, closures_to_opaque(args[1], return_type)))
+    end
+    return Expr(head, Any[closures_to_opaque(x, return_type) for x in args]...)
+end
+
+@specialize
 
 end
