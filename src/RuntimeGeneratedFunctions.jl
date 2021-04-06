@@ -73,10 +73,16 @@ function _check_rgf_initialized(mods...)
     end
 end
 
-function RuntimeGeneratedFunction(cache_module::Module, context_module::Module, code)
+function RuntimeGeneratedFunction(
+        cache_module::Module, context_module::Module, code; opaque_closures=true,
+    )
     _check_rgf_initialized(cache_module, context_module)
-    RuntimeGeneratedFunction(getfield(cache_module, _tagname),
-                             getfield(context_module, _tagname), code)
+    RuntimeGeneratedFunction(
+        getfield(cache_module, _tagname),
+        getfield(context_module, _tagname),
+        code;
+        opaque_closures = opaque_closures
+    )
 end
 
 macro RuntimeGeneratedFunction(code)
