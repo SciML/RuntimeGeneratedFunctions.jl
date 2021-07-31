@@ -1,4 +1,5 @@
 using RuntimeGeneratedFunctions, BenchmarkTools
+using Serialization
 using Test
 
 RuntimeGeneratedFunctions.init(@__MODULE__)
@@ -158,3 +159,9 @@ if VERSION >= v"1.7.0-DEV.351"
     ex = :(x -> [2i for i in 1:x])
     @test @RuntimeGeneratedFunction(ex)(3) == [2, 4, 6]
 end
+
+# Serialization
+
+buf = IOBuffer(read(`$(Base.julia_cmd()) "serialize_rgf.jl"`))
+deserialized_f = deserialize(buf)
+@test deserialized_f(11) == "Hi from a separate process. x=11"

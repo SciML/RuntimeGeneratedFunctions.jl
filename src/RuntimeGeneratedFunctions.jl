@@ -62,6 +62,11 @@ struct RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id} <: Functio
         cached_body = _cache_body(cache_tag, id, body)
         new{Tuple(args), cache_tag, context_tag, id}(cached_body)
     end
+
+    # For internal use in deserialize() - doesen't check whether the body is in the cache!
+    function RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id}(body::Expr) where {argnames,cache_tag,context_tag,id}
+        new{argnames, cache_tag, context_tag, id}(body)
+    end
 end
 
 function _check_rgf_initialized(mods...)
@@ -271,6 +276,15 @@ function closures_to_opaque(ex::Expr, return_type=nothing)
         return Expr(:return, _tconvert(return_type, closures_to_opaque(args[1], return_type)))
     end
     return Expr(head, Any[closures_to_opaque(x, return_type) for x in args]...)
+end
+
+# We write an explicit deserialize() here to trigger caching of the body on a
+# remote node when using Serialialization.jl (in Distributed.jl and elsewhere)
+function Serialization.deserialize(s::AbstractSerializer,
+        ::Type{RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id}}) where {argnames,cache_tag,context_tag,id}
+    body = deserialize(s)
+    cached_body = _cache_body(cache_tag, id, body)
+    RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id}(cached_body)
 end
 
 @specialize
