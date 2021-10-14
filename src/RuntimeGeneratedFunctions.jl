@@ -90,9 +90,9 @@ function RuntimeGeneratedFunction(
     )
 end
 
-macro RuntimeGeneratedFunction(code)
+macro RuntimeGeneratedFunction(code, opaque_closures=true)
     quote
-        RuntimeGeneratedFunction(@__MODULE__, @__MODULE__, $(esc(code)))
+        RuntimeGeneratedFunction(@__MODULE__, @__MODULE__, $(esc(code)); opaque_closures=$(esc(opaque_closures)))
     end
 end
 macro RuntimeGeneratedFunction(context_module, code, opaque_closures=true)
