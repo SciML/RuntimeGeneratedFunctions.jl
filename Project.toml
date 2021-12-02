@@ -10,7 +10,7 @@ Serialization = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
 
 [compat]
 ExprTools = "0.1"
-julia = "1"
+julia = "1.6"
 
 [extras]
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
