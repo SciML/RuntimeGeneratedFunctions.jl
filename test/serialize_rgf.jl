@@ -5,6 +5,6 @@ using Serialization
 
 RuntimeGeneratedFunctions.init(@__MODULE__)
 
-f = @RuntimeGeneratedFunction(:(x->"Hi from a separate process. x=$x"))
+f = @RuntimeGeneratedFunction(:(x -> "Hi from a separate process. x=$x"))
 
 serialize(stdout, f)
