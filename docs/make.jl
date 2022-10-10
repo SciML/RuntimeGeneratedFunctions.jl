@@ -24,5 +24,4 @@ makedocs(sitename = "RuntimeGeneratedFunctions.jl",
          ])
 
 deploydocs(;
-           repo = "github.com/SciML/RuntimeGeneratedFunctions.jl",
-           devbranch = "main")
+           repo = "github.com/SciML/RuntimeGeneratedFunctions.jl")
