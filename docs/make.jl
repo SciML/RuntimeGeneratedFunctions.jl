@@ -2,7 +2,7 @@ using RuntimeGeneratedFunctions
 using Documenter
 
 dir = @__DIR__() * "/.."
-cp(joinpath(dir, "README.md"), joinpath(dir, "docs", "src", "index.md"), force=true)
+cp(joinpath(dir, "README.md"), joinpath(dir, "docs", "src", "index.md"), force = true)
 
 makedocs(sitename = "RuntimeGeneratedFunctions.jl",
          authors = "Chris Rackauckas",
@@ -19,7 +19,9 @@ makedocs(sitename = "RuntimeGeneratedFunctions.jl",
          format = Documenter.HTML(analytics = "UA-90474609-3",
                                   assets = ["assets/favicon.ico"],
                                   canonical = "https://runtimegeneratedfunctions.sciml.ai/stable/"),
-         pages = ["RuntimeGeneratedFunctions.jl: Efficient Staged Compilation" => "index.md"])
+         pages = [
+             "RuntimeGeneratedFunctions.jl: Efficient Staged Compilation" => "index.md",
+         ])
 
 deploydocs(;
            repo = "github.com/SciML/RuntimeGeneratedFunctions.jl",
