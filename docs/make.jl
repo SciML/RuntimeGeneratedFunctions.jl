@@ -18,7 +18,7 @@ makedocs(sitename = "RuntimeGeneratedFunctions.jl",
          ],
          format = Documenter.HTML(analytics = "UA-90474609-3",
                                   assets = ["assets/favicon.ico"],
-                                  canonical = "https://runtimegeneratedfunctions.sciml.ai/stable/"),
+                                  canonical = "https://docs.sciml.ai/RuntimeGeneratedFunctions/stable/"),
          pages = [
              "RuntimeGeneratedFunctions.jl: Efficient Staged Compilation" => "index.md",
          ])
