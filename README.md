@@ -20,6 +20,13 @@ Note that `RuntimeGeneratedFunction` does not handle closures. Please use the
 package for more fixable staged programming. While `GeneralizedGenerated.jl` is
 more powerful, `RuntimeGeneratedFunctions.jl` handles large expressions better.
 
+## Tutorials and Documentation
+
+For information on using the package,
+[see the stable documentation](https://docs.sciml.ai/RuntimeGeneratedFunctions/stable/). Use the
+[in-development documentation](https://docs.sciml.ai/RuntimeGeneratedFunctions/dev/) for the version of
+the documentation, which contains the unreleased features.
+
 ## Simple Example
 
 Here's an example showing how to construct and immediately call a runtime
