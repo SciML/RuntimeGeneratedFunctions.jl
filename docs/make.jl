@@ -1,9 +1,6 @@
 using RuntimeGeneratedFunctions
 using Documenter
 
-dir = @__DIR__() * "/.."
-cp(joinpath(dir, "README.md"), joinpath(dir, "docs", "src", "index.md"), force = true)
-
 makedocs(sitename = "RuntimeGeneratedFunctions.jl",
          authors = "Chris Rackauckas",
          modules = [RuntimeGeneratedFunctions],
