@@ -1,6 +1,9 @@
 using RuntimeGeneratedFunctions
 using Documenter
 
+cp("./docs/Manifest.toml", "./docs/src/assets/Manifest.toml", force = true)
+cp("./docs/Project.toml", "./docs/src/assets/Project.toml", force = true)
+
 makedocs(sitename = "RuntimeGeneratedFunctions.jl",
          authors = "Chris Rackauckas",
          modules = [RuntimeGeneratedFunctions],
