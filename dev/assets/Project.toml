@@ -4,3 +4,4 @@ RuntimeGeneratedFunctions = "7e49a35a-f44a-4d26-94aa-eba1b4ca6b47"
 
 [compat]
 Documenter = "0.27"
+RuntimeGeneratedFunctions = "0.5"
