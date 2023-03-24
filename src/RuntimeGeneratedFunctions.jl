@@ -91,6 +91,50 @@ function RuntimeGeneratedFunction(cache_module::Module, context_module::Module, 
                              opaque_closures = opaque_closures)
 end
 
+"""
+    @RuntimeGeneratedFunction(function_expression)
+    @RuntimeGeneratedFunction(context_module, function_expression, opaque_closures=true)
+
+    RuntimeGeneratedFunction(cache_module, context_module, function_expression; opaque_closures=true)
+
+Construct a function from `function_expression` which can be called immediately
+without world age problems. Somewhat like using `eval(function_expression)` and
+then calling the resulting function. The differences are:
+
+* The result can be called immediately (immune to world age errors)
+* The result is not a named generic function, and doesn't participate in
+  generic function dispatch; it's more like a callable method.
+
+You need to use `RuntimeGeneratedFunctions.init(your_module)` a single time at
+the top level of `your_module` before any other uses of the macro.
+
+If provided, `context_module` is module in which symbols within
+`function_expression` will be looked up. By default this is module in which
+`@RuntimeGeneratedFunction` is expanded.
+
+`cache_module` is the module where the expression `code` will be cached. If
+`RuntimeGeneratedFunction` is used during precompilation, this must be a module
+which is currently being precompiled. Normally this would be set to
+`@__MODULE__` using one of the macro constructors.
+
+If `opaque_closures` is `true`, all closures in `function_expression` are
+converted to
+[opaque closures](https://github.com/JuliaLang/julia/pull/37849#issue-496641229).
+This allows for the use of closures and generators inside the generated function,
+but may not work in all cases due to slightly different semantics. This feature
+requires Julia 1.7.
+
+# Examples
+```
+RuntimeGeneratedFunctions.init(@__MODULE__) # Required at module top-level
+
+function foo()
+    expression = :((x,y)->x+y+1) # May be generated dynamically
+    f = @RuntimeGeneratedFunction(expression)
+    f(1,2) # May be called immediately
+end
+```
+"""
 macro RuntimeGeneratedFunction(code)
     quote
         RuntimeGeneratedFunction(@__MODULE__, @__MODULE__, $(esc(code)))
@@ -102,9 +146,6 @@ macro RuntimeGeneratedFunction(context_module, code, opaque_closures = true)
                                  opaque_closures = $(esc(opaque_closures)))
     end
 end
-
-# Duplicate RuntimeGeneratedFunction docs onto @RuntimeGeneratedFunction
-@eval @doc $(@doc RuntimeGeneratedFunction) var"@RuntimeGeneratedFunction"
 
 function Base.show(io::IO, ::MIME"text/plain",
                    f::RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id}) where {
