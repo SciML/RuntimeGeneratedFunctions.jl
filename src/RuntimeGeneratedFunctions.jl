@@ -50,8 +50,8 @@ end
 """
 
 "$_rgf_docs"
-struct RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id} <: Function
-    body::Expr
+struct RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id, B} <: Function
+    body::B
     function RuntimeGeneratedFunction(cache_tag, context_tag, ex; opaque_closures = true)
         def = splitdef(ex)
         args, body = normalize_args(def[:args]), def[:body]
@@ -61,19 +61,21 @@ struct RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id} <: Functio
         end
         id = expr_to_id(body)
         cached_body = _cache_body(cache_tag, id, body)
-        new{Tuple(args), cache_tag, context_tag, id}(cached_body)
+        new{Tuple(args), cache_tag, context_tag, id, typeof(cached_body)}(cached_body)
     end
 
     # For internal use in deserialize() - doesen't check whether the body is in the cache!
-    function RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id}(body::Expr) where {
+    function RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id}(body) where {
                                                                                                argnames,
                                                                                                cache_tag,
                                                                                                context_tag,
-                                                                                               id
+                                                                                               id,
                                                                                                }
-        new{argnames, cache_tag, context_tag, id}(body)
+        new{argnames, cache_tag, context_tag, id, typeof(body)}(body)
     end
 end
+
+drop_expr(::RuntimeGeneratedFunction{A, C1, C2, ID}) where {A, C1, C2, ID} = RuntimeGeneratedFunction{A, C1, C2, ID}(nothing)
 
 function _check_rgf_initialized(mods...)
     for mod in mods
@@ -298,8 +300,7 @@ end
 # We write an explicit deserialize() here to trigger caching of the body on a
 # remote node when using Serialialization.jl (in Distributed.jl and elsewhere)
 function Serialization.deserialize(s::AbstractSerializer,
-                                   ::Type{
-                                          RuntimeGeneratedFunction{argnames, cache_tag,
+                                   ::Type{<:RuntimeGeneratedFunction{argnames, cache_tag,
                                                                    context_tag, id}}) where {
                                                                                              argnames,
                                                                                              cache_tag,
