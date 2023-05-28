@@ -2,7 +2,7 @@ module RuntimeGeneratedFunctions
 
 using ExprTools, Serialization, SHA
 
-export RuntimeGeneratedFunction, @RuntimeGeneratedFunction
+export RuntimeGeneratedFunction, @RuntimeGeneratedFunction, drop_expr
 
 const _rgf_docs = """
     @RuntimeGeneratedFunction(function_expression)
