@@ -96,6 +96,17 @@ end
 GC.gc()
 @test f_gc(1, -1) == 100001
 
+# Test that drop_expr works
+f_drop1, f_drop2 = let
+    ex = Base.remove_linenums!(:(x -> x - 1))
+    # Construct two identical RGFs here to test the cache deduplication code
+    (drop_expr(@RuntimeGeneratedFunction(ex)),
+     drop_expr(@RuntimeGeneratedFunction(ex)))
+end
+GC.gc()
+@test f_drop1(1) == 0
+@test f_drop2(1) == 0
+
 # Test that threaded use works
 tasks = []
 for k in 1:4
