@@ -66,16 +66,18 @@ struct RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id, B} <: Func
 
     # For internal use in deserialize() - doesen't check whether the body is in the cache!
     function RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id}(body) where {
-                                                                                               argnames,
-                                                                                               cache_tag,
-                                                                                               context_tag,
-                                                                                               id,
-                                                                                               }
+                                                                                         argnames,
+                                                                                         cache_tag,
+                                                                                         context_tag,
+                                                                                         id
+                                                                                         }
         new{argnames, cache_tag, context_tag, id, typeof(body)}(body)
     end
 end
 
-drop_expr(::RuntimeGeneratedFunction{A, C1, C2, ID}) where {A, C1, C2, ID} = RuntimeGeneratedFunction{A, C1, C2, ID}(nothing)
+function drop_expr(::RuntimeGeneratedFunction{A, C1, C2, ID}) where {A, C1, C2, ID}
+    RuntimeGeneratedFunction{A, C1, C2, ID}(nothing)
+end
 
 function _check_rgf_initialized(mods...)
     for mod in mods
@@ -172,7 +174,7 @@ function _cache_body(cache_tag, id, body)
         # canonical one rather than `body`. This ensures the lifetime of the
         # body in the cache will always cover the lifetime of the parent
         # `RuntimeGeneratedFunction`s when they share the same `id`.
-        cached_body = haskey(cache, id) ? cache[id].value : nothing
+        cached_body = haskey(cache, id) ? cache[id] : nothing
         cached_body = cached_body !== nothing ? cached_body : body
         # We cannot use WeakRef because we might drop body to make RGF GPU
         # compatible.
@@ -184,7 +186,7 @@ end
 function _lookup_body(cache_tag, id)
     lock(_cache_lock) do
         cache = getfield(parentmodule(cache_tag), _cachename)
-        cache[id].value
+        cache[id]
     end
 end
 
@@ -295,13 +297,14 @@ end
 # We write an explicit deserialize() here to trigger caching of the body on a
 # remote node when using Serialialization.jl (in Distributed.jl and elsewhere)
 function Serialization.deserialize(s::AbstractSerializer,
-                                   ::Type{<:RuntimeGeneratedFunction{argnames, cache_tag,
-                                                                   context_tag, id}}) where {
-                                                                                             argnames,
-                                                                                             cache_tag,
-                                                                                             context_tag,
-                                                                                             id
-                                                                                             }
+                                   ::Type{
+                                          <:RuntimeGeneratedFunction{argnames, cache_tag,
+                                                                     context_tag, id}}) where {
+                                                                                               argnames,
+                                                                                               cache_tag,
+                                                                                               context_tag,
+                                                                                               id
+                                                                                               }
     body = deserialize(s)
     cached_body = _cache_body(cache_tag, id, body)
     RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id}(cached_body)
