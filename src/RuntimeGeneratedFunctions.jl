@@ -172,16 +172,11 @@ function _cache_body(cache_tag, id, body)
         # canonical one rather than `body`. This ensures the lifetime of the
         # body in the cache will always cover the lifetime of the parent
         # `RuntimeGeneratedFunction`s when they share the same `id`.
-        #
-        # Tricky case #2: Unless we hold a separate reference to
-        # `cache[id].value`, the GC can collect it (causing it to become
-        # `nothing`). So root it in a local variable first.
-        #
         cached_body = haskey(cache, id) ? cache[id].value : nothing
         cached_body = cached_body !== nothing ? cached_body : body
-        # Use a WeakRef to allow `body` to be garbage collected. (After GC, the
-        # cache will still contain an empty entry with key `id`.)
-        cache[id] = WeakRef(cached_body)
+        # We cannot use WeakRef because we might drop body to make RGF GPU
+        # compatible.
+        cache[id] = cached_body
         return cached_body
     end
 end
