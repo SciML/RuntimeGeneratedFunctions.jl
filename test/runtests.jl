@@ -164,6 +164,7 @@ end
 
 # Serialization
 
-buf = IOBuffer(read(`$(Base.julia_cmd()) "serialize_rgf.jl"`))
+proj = dirname(Base.active_project())
+buf = IOBuffer(read(`$(Base.julia_cmd()) --startup-file=no --project=$proj "serialize_rgf.jl"`))
 deserialized_f = deserialize(buf)
 @test deserialized_f(11) == "Hi from a separate process. x=11"
