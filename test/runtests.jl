@@ -177,5 +177,8 @@ end
 
 proj = dirname(Base.active_project())
 buf = IOBuffer(read(`$(Base.julia_cmd()) --startup-file=no --project=$proj "serialize_rgf.jl"`))
-deserialized_f = deserialize(buf)
+deserialized_f, deserialized_g = deserialize(buf)
 @test deserialized_f(11) == "Hi from a separate process. x=11"
+@test deserialized_f.body isa Expr
+@test deserialized_g(12) == "Serialization with dropped body. y=12"
+@test deserialized_g.body isa Nothing
