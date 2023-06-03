@@ -323,10 +323,18 @@ end
 # the body on a remote node when using Serialialization.jl (in Distributed.jl
 # and elsewhere)
 function Serialization.serialize(s::AbstractSerializer,
-        rgf::RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id, B}) where {
-            argnames, cache_tag, context_tag, id, B}
+                                 rgf::RuntimeGeneratedFunction{argnames, cache_tag,
+                                                               context_tag, id, B}) where {
+                                                                                           argnames,
+                                                                                           cache_tag,
+                                                                                           context_tag,
+                                                                                           id,
+                                                                                           B
+                                                                                           }
     body = _lookup_body(cache_tag, id)
-    Serialization.serialize_type(s, RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id, B})
+    Serialization.serialize_type(s,
+                                 RuntimeGeneratedFunction{argnames, cache_tag, context_tag,
+                                                          id, B})
     serialize(s, body)
 end
 
@@ -334,12 +342,12 @@ function Serialization.deserialize(s::AbstractSerializer,
                                    ::Type{
                                           <:RuntimeGeneratedFunction{argnames, cache_tag,
                                                                      context_tag, id, B}}) where {
-                                                                                               argnames,
-                                                                                               cache_tag,
-                                                                                               context_tag,
-                                                                                               id,
-                                                                                               B
-                                                                                               }
+                                                                                                  argnames,
+                                                                                                  cache_tag,
+                                                                                                  context_tag,
+                                                                                                  id,
+                                                                                                  B
+                                                                                                  }
     body = deserialize(s)
     cached_body = _cache_body(cache_tag, id, body)
     f = RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id}(cached_body)
