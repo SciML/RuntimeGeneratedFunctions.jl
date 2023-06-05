@@ -319,20 +319,39 @@ function closures_to_opaque(ex::Expr, return_type = nothing)
     return Expr(head, Any[closures_to_opaque(x, return_type) for x in args]...)
 end
 
-# We write an explicit deserialize() here to trigger caching of the body on a
-# remote node when using Serialialization.jl (in Distributed.jl and elsewhere)
+# We write an explicit serialize() and deserialize() here to manage caching of
+# the body on a remote node when using Serialialization.jl (in Distributed.jl
+# and elsewhere)
+function Serialization.serialize(s::AbstractSerializer,
+                                 rgf::RuntimeGeneratedFunction{argnames, cache_tag,
+                                                               context_tag, id, B}) where {
+                                                                                           argnames,
+                                                                                           cache_tag,
+                                                                                           context_tag,
+                                                                                           id,
+                                                                                           B
+                                                                                           }
+    body = _lookup_body(cache_tag, id)
+    Serialization.serialize_type(s,
+                                 RuntimeGeneratedFunction{argnames, cache_tag, context_tag,
+                                                          id, B})
+    serialize(s, body)
+end
+
 function Serialization.deserialize(s::AbstractSerializer,
                                    ::Type{
                                           <:RuntimeGeneratedFunction{argnames, cache_tag,
-                                                                     context_tag, id}}) where {
-                                                                                               argnames,
-                                                                                               cache_tag,
-                                                                                               context_tag,
-                                                                                               id
-                                                                                               }
+                                                                     context_tag, id, B}}) where {
+                                                                                                  argnames,
+                                                                                                  cache_tag,
+                                                                                                  context_tag,
+                                                                                                  id,
+                                                                                                  B
+                                                                                                  }
     body = deserialize(s)
     cached_body = _cache_body(cache_tag, id, body)
-    RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id}(cached_body)
+    f = RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id}(cached_body)
+    B === Nothing ? drop_expr(f) : f
 end
 
 @specialize
