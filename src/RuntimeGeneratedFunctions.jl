@@ -21,8 +21,8 @@ then calling the resulting function. The differences are:
 You need to use `RuntimeGeneratedFunctions.init(your_module)` a single time at
 the top level of `your_module` before any other uses of the macro.
 
-If provided, `context_module` is module in which symbols within
-`function_expression` will be looked up. By default this is module in which
+If provided, `context_module` is the module in which symbols within
+`function_expression` will be looked up. By default, this is the module in which
 `@RuntimeGeneratedFunction` is expanded.
 
 `cache_module` is the module where the expression `code` will be cached. If
