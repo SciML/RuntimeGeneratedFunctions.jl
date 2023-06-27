@@ -1,15 +1,13 @@
 # RuntimeGeneratedFunctions.jl
 
-
 [![Join the chat at https://julialang.zulipchat.com #sciml-bridged](https://img.shields.io/static/v1?label=Zulip&message=chat&color=9558b2&labelColor=389826)](https://julialang.zulipchat.com/#narrow/stream/279055-sciml-bridged)
 [![Global Docs](https://img.shields.io/badge/docs-SciML-blue.svg)](https://docs.sciml.ai/RuntimeGeneratedFunctions/stable/)
 
 [![codecov](https://codecov.io/gh/SciML/RuntimeGeneratedFunctions.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/SciML/RuntimeGeneratedFunctions.jl)
 [![Build Status](https://github.com/SciML/RuntimeGeneratedFunctions.jl/workflows/CI/badge.svg)](https://github.com/SciML/RuntimeGeneratedFunctions.jl/actions?query=workflow%3ACI)
 
-[![ColPrac: Contributor's Guide on Collaborative Practices for Community Packages](https://img.shields.io/badge/ColPrac-Contributor's%20Guide-blueviolet)](https://github.com/SciML/ColPrac)
+[![ColPrac: Contributor's Guide on Collaborative Practices for Community Packages](https://img.shields.io/badge/ColPrac-Contributor%27s%20Guide-blueviolet)](https://github.com/SciML/ColPrac)
 [![SciML Code Style](https://img.shields.io/static/v1?label=code%20style&message=SciML&color=9558b2&labelColor=389826)](https://github.com/SciML/SciMLStyle)
-
 
 `RuntimeGeneratedFunctions` are functions generated at runtime without world-age
 issues and with the full performance of a standard Julia anonymous function. This
@@ -37,7 +35,7 @@ using RuntimeGeneratedFunctions
 RuntimeGeneratedFunctions.init(@__MODULE__)
 
 function no_worldage()
-    ex = :(function f(_du,_u,_p,_t)
+    ex = :(function f(_du, _u, _p, _t)
         @inbounds _du[1] = _u[1]
         @inbounds _du[2] = _u[2]
         nothing
@@ -47,7 +45,7 @@ function no_worldage()
     u = rand(2)
     p = nothing
     t = nothing
-    f1(du,u,p,t)
+    f1(du, u, p, t)
 end
 no_worldage()
 ```
@@ -62,9 +60,9 @@ to the `@RuntimeGeneratedFunction` constructor. For example
 RuntimeGeneratedFunctions.init(@__MODULE__)
 
 module A
-    using RuntimeGeneratedFunctions
-    RuntimeGeneratedFunctions.init(A)
-    helper_function(x) = x + 1
+using RuntimeGeneratedFunctions
+RuntimeGeneratedFunctions.init(A)
+helper_function(x) = x + 1
 end
 
 function g()
@@ -93,13 +91,13 @@ RuntimeGeneratedFunctions.init(@__MODULE__)
 # Imagine HelperModule is in a separate package and will be precompiled
 # separately.
 module HelperModule
-    using RuntimeGeneratedFunctions
-    RuntimeGeneratedFunctions.init(HelperModule)
+using RuntimeGeneratedFunctions
+RuntimeGeneratedFunctions.init(HelperModule)
 
-    function construct_rgf(cache_module, context_module, ex)
-        ex = :((x)->$ex^2 + x)
-        RuntimeGeneratedFunction(cache_module, context_module, ex)
-    end
+function construct_rgf(cache_module, context_module, ex)
+    ex = :((x) -> $ex^2 + x)
+    RuntimeGeneratedFunction(cache_module, context_module, ex)
+end
 end
 
 function g()
@@ -112,4 +110,3 @@ end
 f = g()
 @show f(1)
 ```
-

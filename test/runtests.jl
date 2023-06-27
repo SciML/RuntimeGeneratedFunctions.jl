@@ -11,22 +11,22 @@ function f(_du, _u, _p, _t)
 end
 
 ex1 = :((_du, _u, _p, _t) -> begin
-            @inbounds _du[1] = _u[1]
-            @inbounds _du[2] = _u[2]
-            nothing
-        end)
+    @inbounds _du[1] = _u[1]
+    @inbounds _du[2] = _u[2]
+    nothing
+end)
 
 ex2 = :(function f(_du, _u, _p, _t)
-            @inbounds _du[1] = _u[1]
-            @inbounds _du[2] = _u[2]
-            nothing
-        end)
+    @inbounds _du[1] = _u[1]
+    @inbounds _du[2] = _u[2]
+    nothing
+end)
 
 ex3 = :(function (_du::T, _u::Vector{E}, _p::P, _t::Any) where {T <: Vector, E, P}
-            @inbounds _du[1] = _u[1]
-            @inbounds _du[2] = _u[2]
-            nothing
-        end)
+    @inbounds _du[1] = _u[1]
+    @inbounds _du[2] = _u[2]
+    nothing
+end)
 
 f1 = @RuntimeGeneratedFunction(ex1)
 f2 = @RuntimeGeneratedFunction(ex2)
@@ -59,10 +59,10 @@ t4 = @belapsed $f3($du, $u, $p, $t)
 
 function no_worldage()
     ex = :(function f(_du, _u, _p, _t)
-               @inbounds _du[1] = _u[1]
-               @inbounds _du[2] = _u[2]
-               nothing
-           end)
+        @inbounds _du[1] = _u[1]
+        @inbounds _du[2] = _u[2]
+        nothing
+    end)
     f1 = @RuntimeGeneratedFunction(ex)
     du = rand(2)
     u = rand(2)
@@ -74,7 +74,7 @@ end
 
 # Test show()
 @test sprint(show, MIME"text/plain"(),
-             @RuntimeGeneratedFunction(Base.remove_linenums!(:((x, y) -> x + y + 1)))) ==
+    @RuntimeGeneratedFunction(Base.remove_linenums!(:((x, y) -> x + y + 1)))) ==
       """
       RuntimeGeneratedFunction(#=in $(@__MODULE__)=#, #=using $(@__MODULE__)=#, :((x, y)->begin
                 x + y + 1
@@ -101,7 +101,7 @@ f_drop1, f_drop2 = let
     ex = Base.remove_linenums!(:(x -> x - 1))
     # Construct two identical RGFs here to test the cache deduplication code
     (drop_expr(@RuntimeGeneratedFunction(ex)),
-     drop_expr(@RuntimeGeneratedFunction(ex)))
+        drop_expr(@RuntimeGeneratedFunction(ex)))
 end
 GC.gc()
 @test f_drop1(1) == 0
@@ -143,10 +143,10 @@ f_outside = @RuntimeGeneratedFunction(GlobalsTest, :(x -> x + y_in_GlobalsTest))
 @test f_outside(2) == 42
 
 @test_throws ErrorException @eval(module NotInitTest
-                                  using RuntimeGeneratedFunctions
-                                  # RuntimeGeneratedFunctions.init(@__MODULE__) # <-- missing
-                                  f = @RuntimeGeneratedFunction(:(x -> x + y))
-                                  end)
+using RuntimeGeneratedFunctions
+# RuntimeGeneratedFunctions.init(@__MODULE__) # <-- missing
+f = @RuntimeGeneratedFunction(:(x -> x + y))
+end)
 
 # closures
 if VERSION >= v"1.7.0-DEV.351"
@@ -157,13 +157,13 @@ if VERSION >= v"1.7.0-DEV.351"
     @test @RuntimeGeneratedFunction(ex)(2)(3) === 5.0
 
     ex = :(x -> function (y::Int)
-               return x + y
-           end)
+        return x + y
+    end)
     @test @RuntimeGeneratedFunction(ex)(2)(3) === 5
 
     ex = :(x -> function f(y::Int)::UInt8
-               return x + y
-           end)
+        return x + y
+    end)
     @test @RuntimeGeneratedFunction(ex)(2)(3) === 0x05
 
     ex = :(x -> sum(i^2 for i in 1:x))

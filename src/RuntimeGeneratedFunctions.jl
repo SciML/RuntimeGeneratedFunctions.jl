@@ -21,8 +21,8 @@ then calling the resulting function. The differences are:
 You need to use `RuntimeGeneratedFunctions.init(your_module)` a single time at
 the top level of `your_module` before any other uses of the macro.
 
-If provided, `context_module` is module in which symbols within
-`function_expression` will be looked up. By default this is module in which
+If provided, `context_module` is the module in which symbols within
+`function_expression` will be looked up. By default, this is the module in which
 `@RuntimeGeneratedFunction` is expanded.
 
 `cache_module` is the module where the expression `code` will be cached. If
@@ -65,18 +65,28 @@ struct RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id, B} <: Func
     end
 
     # For internal use in deserialize() - doesen't check whether the body is in the cache!
-    function RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id}(body) where {
-                                                                                         argnames,
-                                                                                         cache_tag,
-                                                                                         context_tag,
-                                                                                         id
-                                                                                         }
+    function RuntimeGeneratedFunction{
+        argnames,
+        cache_tag,
+        context_tag,
+        id,
+    }(body) where {
+        argnames,
+        cache_tag,
+        context_tag,
+        id,
+    }
         new{argnames, cache_tag, context_tag, id, typeof(body)}(body)
     end
 end
 
-function drop_expr(::RuntimeGeneratedFunction{a, cache_tag, c, id}) where {a, cache_tag, c,
-                                                                           id}
+function drop_expr(::RuntimeGeneratedFunction{
+    a,
+    cache_tag,
+    c,
+    id,
+}) where {a, cache_tag, c,
+    id}
     # When dropping the reference to the body from an RGF, we need to upgrade
     # from a weak to a strong reference in the cache to prevent the body being
     # GC'd.
@@ -100,12 +110,12 @@ function _check_rgf_initialized(mods...)
 end
 
 function RuntimeGeneratedFunction(cache_module::Module, context_module::Module, code;
-                                  opaque_closures = true)
+    opaque_closures = true)
     _check_rgf_initialized(cache_module, context_module)
     RuntimeGeneratedFunction(getfield(cache_module, _tagname),
-                             getfield(context_module, _tagname),
-                             code;
-                             opaque_closures = opaque_closures)
+        getfield(context_module, _tagname),
+        code;
+        opaque_closures = opaque_closures)
 end
 
 "$_rgf_docs"
@@ -117,22 +127,22 @@ end
 macro RuntimeGeneratedFunction(context_module, code, opaque_closures = true)
     quote
         RuntimeGeneratedFunction(@__MODULE__, $(esc(context_module)), $(esc(code));
-                                 opaque_closures = $(esc(opaque_closures)))
+            opaque_closures = $(esc(opaque_closures)))
     end
 end
 
 function Base.show(io::IO, ::MIME"text/plain",
-                   f::RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id}) where {
-                                                                                             argnames,
-                                                                                             cache_tag,
-                                                                                             context_tag,
-                                                                                             id
-                                                                                             }
+    f::RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id}) where {
+    argnames,
+    cache_tag,
+    context_tag,
+    id,
+}
     cache_mod = parentmodule(cache_tag)
     context_mod = parentmodule(context_tag)
     func_expr = Expr(:->, Expr(:tuple, argnames...), _lookup_body(cache_tag, id))
     print(io, "RuntimeGeneratedFunction(#=in $cache_mod=#, #=using $context_mod=#, ",
-          repr(func_expr), ")")
+        repr(func_expr), ")")
 end
 
 function (f::RuntimeGeneratedFunction)(args::Vararg{Any, N}) where {N}
@@ -225,36 +235,36 @@ function init(mod)
     lock(_cache_lock) do
         if !isdefined(mod, _cachename)
             mod.eval(quote
-                         const $_cachename = Dict()
-                         struct $_tagname end
+                const $_cachename = Dict()
+                struct $_tagname end
 
-                         # We create method of `generated_callfunc` in the user's module
-                         # so that any global symbols within the body will be looked up
-                         # in the user's module scope.
-                         #
-                         # This is straightforward but clunky.  A neater solution should
-                         # be to explicitly expand in the user's module and return a
-                         # CodeInfo from `generated_callfunc`, but it seems we'd need
-                         # `jl_expand_and_resolve` which doesn't exist until Julia 1.3
-                         # or so. See:
-                         #   https://github.com/JuliaLang/julia/pull/32902
-                         #   https://github.com/NHDaly/StagedFunctions.jl/blob/master/src/StagedFunctions.jl#L30
-                         @inline @generated function $RuntimeGeneratedFunctions.generated_callfunc(f::$RuntimeGeneratedFunctions.RuntimeGeneratedFunction{
-                                                                                                                                                          argnames,
-                                                                                                                                                          cache_tag,
-                                                                                                                                                          $_tagname,
-                                                                                                                                                          id
-                                                                                                                                                          },
-                                                                                                   __args...) where {
-                                                                                                                     argnames,
-                                                                                                                     cache_tag,
-                                                                                                                     id
-                                                                                                                     }
-                             $RuntimeGeneratedFunctions.generated_callfunc_body(argnames,
-                                                                                cache_tag,
-                                                                                id, __args)
-                         end
-                     end)
+                # We create method of `generated_callfunc` in the user's module
+                # so that any global symbols within the body will be looked up
+                # in the user's module scope.
+                #
+                # This is straightforward but clunky.  A neater solution should
+                # be to explicitly expand in the user's module and return a
+                # CodeInfo from `generated_callfunc`, but it seems we'd need
+                # `jl_expand_and_resolve` which doesn't exist until Julia 1.3
+                # or so. See:
+                #   https://github.com/JuliaLang/julia/pull/32902
+                #   https://github.com/NHDaly/StagedFunctions.jl/blob/master/src/StagedFunctions.jl#L30
+                @inline @generated function $RuntimeGeneratedFunctions.generated_callfunc(f::$RuntimeGeneratedFunctions.RuntimeGeneratedFunction{
+                        argnames,
+                        cache_tag,
+                        $_tagname,
+                        id,
+                    },
+                    __args...) where {
+                    argnames,
+                    cache_tag,
+                    id,
+                }
+                    $RuntimeGeneratedFunctions.generated_callfunc_body(argnames,
+                        cache_tag,
+                        id, __args)
+                end
+            end)
         end
     end
 end
@@ -307,14 +317,14 @@ function closures_to_opaque(ex::Expr, return_type = nothing)
         f_args = Expr(:tuple, Any[x.args[1] for x in args[2:end]]...)
         iters = Any[x.args[2] for x in args[2:end]]
         return Expr(:call,
-                    GlobalRef(Base, :Generator),
-                    closures_to_opaque(Expr(:(->), f_args, args[1])),
-                    iters...)
+            GlobalRef(Base, :Generator),
+            closures_to_opaque(Expr(:(->), f_args, args[1])),
+            iters...)
     elseif head === :opaque_closure
         return closures_to_opaque(args[1])
     elseif head === :return && return_type !== nothing
         return Expr(:return,
-                    _tconvert(return_type, closures_to_opaque(args[1], return_type)))
+            _tconvert(return_type, closures_to_opaque(args[1], return_type)))
     end
     return Expr(head, Any[closures_to_opaque(x, return_type) for x in args]...)
 end
@@ -323,31 +333,31 @@ end
 # the body on a remote node when using Serialialization.jl (in Distributed.jl
 # and elsewhere)
 function Serialization.serialize(s::AbstractSerializer,
-                                 rgf::RuntimeGeneratedFunction{argnames, cache_tag,
-                                                               context_tag, id, B}) where {
-                                                                                           argnames,
-                                                                                           cache_tag,
-                                                                                           context_tag,
-                                                                                           id,
-                                                                                           B
-                                                                                           }
+    rgf::RuntimeGeneratedFunction{argnames, cache_tag,
+        context_tag, id, B}) where {
+    argnames,
+    cache_tag,
+    context_tag,
+    id,
+    B,
+}
     body = _lookup_body(cache_tag, id)
     Serialization.serialize_type(s,
-                                 RuntimeGeneratedFunction{argnames, cache_tag, context_tag,
-                                                          id, B})
+        RuntimeGeneratedFunction{argnames, cache_tag, context_tag,
+            id, B})
     serialize(s, body)
 end
 
 function Serialization.deserialize(s::AbstractSerializer,
-                                   ::Type{
-                                          <:RuntimeGeneratedFunction{argnames, cache_tag,
-                                                                     context_tag, id, B}}) where {
-                                                                                                  argnames,
-                                                                                                  cache_tag,
-                                                                                                  context_tag,
-                                                                                                  id,
-                                                                                                  B
-                                                                                                  }
+    ::Type{
+        <:RuntimeGeneratedFunction{argnames, cache_tag,
+            context_tag, id, B}}) where {
+    argnames,
+    cache_tag,
+    context_tag,
+    id,
+    B,
+}
     body = deserialize(s)
     cached_body = _cache_body(cache_tag, id, body)
     f = RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id}(cached_body)

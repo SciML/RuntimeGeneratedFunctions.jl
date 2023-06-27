@@ -26,7 +26,7 @@ using RuntimeGeneratedFunctions
 RuntimeGeneratedFunctions.init(@__MODULE__)
 
 function no_worldage()
-    ex = :(function f(_du,_u,_p,_t)
+    ex = :(function f(_du, _u, _p, _t)
         @inbounds _du[1] = _u[1]
         @inbounds _du[2] = _u[2]
         nothing
@@ -36,7 +36,7 @@ function no_worldage()
     u = rand(2)
     p = nothing
     t = nothing
-    f1(du,u,p,t)
+    f1(du, u, p, t)
 end
 no_worldage()
 ```
@@ -44,16 +44,16 @@ no_worldage()
 ## Changing how global symbols are looked up
 
 If you want to use helper functions or global variables from a different
-module within your function expression you'll need to pass a `context_module`
+module within your function expression, you'll need to pass a `context_module`
 to the `@RuntimeGeneratedFunction` constructor. For example
 
 ```julia
 RuntimeGeneratedFunctions.init(@__MODULE__)
 
 module A
-    using RuntimeGeneratedFunctions
-    RuntimeGeneratedFunctions.init(A)
-    helper_function(x) = x + 1
+using RuntimeGeneratedFunctions
+RuntimeGeneratedFunctions.init(A)
+helper_function(x) = x + 1
 end
 
 function g()
@@ -66,12 +66,12 @@ end
 
 ## Precompilation and setting the function expression cache
 
-For technical reasons RuntimeGeneratedFunctions needs to cache the function
+For technical reasons, RuntimeGeneratedFunctions needs to cache the function
 expression in a global variable within some module. This is normally
 transparent to the user, but if the `RuntimeGeneratedFunction` is evaluated
 during module precompilation, the cache module must be explicitly set to the
 module currently being precompiled. This is relevant for helper functions in
-some module which construct a RuntimeGeneratedFunction on behalf of the user.
+some module, which construct a RuntimeGeneratedFunction on behalf of the user.
 For example, in the following code, any third party user of
 `HelperModule.construct_rgf()` user needs to pass their own module as the
 `cache_module` if they want the returned function to work after precompilation:
@@ -82,13 +82,13 @@ RuntimeGeneratedFunctions.init(@__MODULE__)
 # Imagine HelperModule is in a separate package and will be precompiled
 # separately.
 module HelperModule
-    using RuntimeGeneratedFunctions
-    RuntimeGeneratedFunctions.init(HelperModule)
+using RuntimeGeneratedFunctions
+RuntimeGeneratedFunctions.init(HelperModule)
 
-    function construct_rgf(cache_module, context_module, ex)
-        ex = :((x)->$ex^2 + x)
-        RuntimeGeneratedFunction(cache_module, context_module, ex)
-    end
+function construct_rgf(cache_module, context_module, ex)
+    ex = :((x) -> $ex^2 + x)
+    RuntimeGeneratedFunction(cache_module, context_module, ex)
+end
 end
 
 function g()
@@ -103,56 +103,72 @@ f = g()
 ```
 
 ## Reproducibility
+
 ```@raw html
 <details><summary>The documentation of this SciML package was built using these direct dependencies,</summary>
 ```
+
 ```@example
 using Pkg # hide
 Pkg.status() # hide
 ```
+
 ```@raw html
 </details>
 ```
+
 ```@raw html
 <details><summary>and using this machine and Julia version.</summary>
 ```
+
 ```@example
 using InteractiveUtils # hide
 versioninfo() # hide
 ```
+
 ```@raw html
 </details>
 ```
+
 ```@raw html
 <details><summary>A more complete overview of all dependencies and their versions is also provided.</summary>
 ```
+
 ```@example
 using Pkg # hide
-Pkg.status(;mode = PKGMODE_MANIFEST) # hide
+Pkg.status(; mode = PKGMODE_MANIFEST) # hide
 ```
+
 ```@raw html
 </details>
 ```
+
 ```@raw html
 You can also download the 
 <a href="
 ```
+
 ```@eval
 using TOML
-version = TOML.parse(read("../../Project.toml",String))["version"]
-name = TOML.parse(read("../../Project.toml",String))["name"]
-link = "https://github.com/SciML/"*name*".jl/tree/gh-pages/v"*version*"/assets/Manifest.toml"
+version = TOML.parse(read("../../Project.toml", String))["version"]
+name = TOML.parse(read("../../Project.toml", String))["name"]
+link = "https://github.com/SciML/" * name * ".jl/tree/gh-pages/v" * version *
+       "/assets/Manifest.toml"
 ```
+
 ```@raw html
 ">manifest</a> file and the
 <a href="
 ```
+
 ```@eval
 using TOML
-version = TOML.parse(read("../../Project.toml",String))["version"]
-name = TOML.parse(read("../../Project.toml",String))["name"]
-link = "https://github.com/SciML/"*name*".jl/tree/gh-pages/v"*version*"/assets/Project.toml"
+version = TOML.parse(read("../../Project.toml", String))["version"]
+name = TOML.parse(read("../../Project.toml", String))["name"]
+link = "https://github.com/SciML/" * name * ".jl/tree/gh-pages/v" * version *
+       "/assets/Project.toml"
 ```
+
 ```@raw html
 ">project</a> file.
 ```
