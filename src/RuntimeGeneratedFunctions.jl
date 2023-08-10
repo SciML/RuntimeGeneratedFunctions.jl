@@ -54,7 +54,8 @@ struct RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id, B} <: Func
     body::B
     function RuntimeGeneratedFunction(cache_tag, context_tag, ex; opaque_closures = true)
         def = splitdef(ex)
-        args, body = normalize_args(def[:args]), def[:body]
+        args = normalize_args(get(def, :args, Symbol[]))
+        body = def[:body]
         if opaque_closures && isdefined(Base, :Experimental) &&
            isdefined(Base.Experimental, Symbol("@opaque"))
             body = closures_to_opaque(body)
