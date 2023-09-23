@@ -28,7 +28,7 @@ ex3 = :(function (_du::T, _u::Vector{E}, _p::P, _t::Any) where {T <: Vector, E, 
     nothing
 end)
 
-f0 = @RuntimeGeneratedFunction(:(()->42))
+f0 = @RuntimeGeneratedFunction(:(() -> 42))
 f1 = @RuntimeGeneratedFunction(ex1)
 f2 = @RuntimeGeneratedFunction(ex2)
 f3 = @RuntimeGeneratedFunction(ex3)
