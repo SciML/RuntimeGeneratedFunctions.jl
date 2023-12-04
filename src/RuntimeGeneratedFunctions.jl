@@ -331,7 +331,7 @@ function closures_to_opaque(ex::Expr, return_type = nothing)
 end
 
 # We write an explicit serialize() and deserialize() here to manage caching of
-# the body on a remote node when using Serialialization.jl (in Distributed.jl
+# the body on a remote node when using Serialization.jl (in Distributed.jl
 # and elsewhere)
 function Serialization.serialize(s::AbstractSerializer,
     rgf::RuntimeGeneratedFunction{argnames, cache_tag,
