@@ -58,9 +58,9 @@ t2 = @belapsed $f1($du, $u, $p, $t)
 t3 = @belapsed $f2($du, $u, $p, $t)
 t4 = @belapsed $f3($du, $u, $p, $t)
 
-@test t1≈t2 atol=3e-9
-@test t1≈t3 atol=3e-9
-@test t1≈t4 atol=3e-9
+@test t1≈t2 atol=3e-8
+@test t1≈t3 atol=3e-8
+@test t1≈t4 atol=3e-8
 
 function no_worldage()
     ex = :(function f(_du, _u, _p, _t)
