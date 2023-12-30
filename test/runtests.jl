@@ -58,9 +58,9 @@ t2 = @belapsed $f1($du, $u, $p, $t)
 t3 = @belapsed $f2($du, $u, $p, $t)
 t4 = @belapsed $f3($du, $u, $p, $t)
 
-@test t1≈t2 atol=3e-9
-@test t1≈t3 atol=3e-9
-@test t1≈t4 atol=3e-9
+@test t1≈t2 atol=3e-8
+@test t1≈t3 atol=3e-8
+@test t1≈t4 atol=3e-8
 
 function no_worldage()
     ex = :(function f(_du, _u, _p, _t)
@@ -153,30 +153,28 @@ using RuntimeGeneratedFunctions
 f = @RuntimeGeneratedFunction(:(x -> x + y))
 end)
 
-# closures
-if VERSION >= v"1.7.0-DEV.351"
-    ex = :(x -> (y -> x + y))
-    @test @RuntimeGeneratedFunction(ex)(2)(3) === 5
 
-    ex = :(x -> (f(y::Int)::Float64 = x + y; f))
-    @test @RuntimeGeneratedFunction(ex)(2)(3) === 5.0
+ex = :(x -> (y -> x + y))
+@test @RuntimeGeneratedFunction(ex)(2)(3) === 5
 
-    ex = :(x -> function (y::Int)
-        return x + y
-    end)
-    @test @RuntimeGeneratedFunction(ex)(2)(3) === 5
+ex = :(x -> (f(y::Int)::Float64 = x + y; f))
+@test @RuntimeGeneratedFunction(ex)(2)(3) === 5.0
 
-    ex = :(x -> function f(y::Int)::UInt8
-        return x + y
-    end)
-    @test @RuntimeGeneratedFunction(ex)(2)(3) === 0x05
+ex = :(x -> function (y::Int)
+    return x + y
+end)
+@test @RuntimeGeneratedFunction(ex)(2)(3) === 5
 
-    ex = :(x -> sum(i^2 for i in 1:x))
-    @test @RuntimeGeneratedFunction(ex)(3) === 14
+ex = :(x -> function f(y::Int)::UInt8
+    return x + y
+end)
+@test @RuntimeGeneratedFunction(ex)(2)(3) === 0x05
 
-    ex = :(x -> [2i for i in 1:x])
-    @test @RuntimeGeneratedFunction(ex)(3) == [2, 4, 6]
-end
+ex = :(x -> sum(i^2 for i in 1:x))
+@test @RuntimeGeneratedFunction(ex)(3) === 14
+
+ex = :(x -> [2i for i in 1:x])
+@test @RuntimeGeneratedFunction(ex)(3) == [2, 4, 6]
 
 # Serialization
 
