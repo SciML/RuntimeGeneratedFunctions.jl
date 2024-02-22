@@ -67,27 +67,27 @@ struct RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id, B} <: Func
 
     # For internal use in deserialize() - doesen't check whether the body is in the cache!
     function RuntimeGeneratedFunction{
-        argnames,
-        cache_tag,
-        context_tag,
-        id,
+            argnames,
+            cache_tag,
+            context_tag,
+            id
     }(body) where {
-        argnames,
-        cache_tag,
-        context_tag,
-        id,
+            argnames,
+            cache_tag,
+            context_tag,
+            id
     }
         new{argnames, cache_tag, context_tag, id, typeof(body)}(body)
     end
 end
 
 function drop_expr(::RuntimeGeneratedFunction{
-    a,
-    cache_tag,
-    c,
-    id,
+        a,
+        cache_tag,
+        c,
+        id
 }) where {a, cache_tag, c,
-    id}
+        id}
     # When dropping the reference to the body from an RGF, we need to upgrade
     # from a weak to a strong reference in the cache to prevent the body being
     # GC'd.
@@ -111,7 +111,7 @@ function _check_rgf_initialized(mods...)
 end
 
 function RuntimeGeneratedFunction(cache_module::Module, context_module::Module, code;
-    opaque_closures = true)
+        opaque_closures = true)
     _check_rgf_initialized(cache_module, context_module)
     RuntimeGeneratedFunction(getfield(cache_module, _tagname),
         getfield(context_module, _tagname),
@@ -133,11 +133,11 @@ macro RuntimeGeneratedFunction(context_module, code, opaque_closures = true)
 end
 
 function Base.show(io::IO, ::MIME"text/plain",
-    f::RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id}) where {
-    argnames,
-    cache_tag,
-    context_tag,
-    id,
+        f::RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id}) where {
+        argnames,
+        cache_tag,
+        context_tag,
+        id
 }
     cache_mod = parentmodule(cache_tag)
     context_mod = parentmodule(context_tag)
@@ -250,16 +250,17 @@ function init(mod)
                 # or so. See:
                 #   https://github.com/JuliaLang/julia/pull/32902
                 #   https://github.com/NHDaly/StagedFunctions.jl/blob/master/src/StagedFunctions.jl#L30
-                @inline @generated function $RuntimeGeneratedFunctions.generated_callfunc(f::$RuntimeGeneratedFunctions.RuntimeGeneratedFunction{
+                @inline @generated function $RuntimeGeneratedFunctions.generated_callfunc(
+                        f::$RuntimeGeneratedFunctions.RuntimeGeneratedFunction{
+                            argnames,
+                            cache_tag,
+                            $_tagname,
+                            id
+                        },
+                        __args...) where {
                         argnames,
                         cache_tag,
-                        $_tagname,
-                        id,
-                    },
-                    __args...) where {
-                    argnames,
-                    cache_tag,
-                    id,
+                        id
                 }
                     $RuntimeGeneratedFunctions.generated_callfunc_body(argnames,
                         cache_tag,
@@ -334,13 +335,13 @@ end
 # the body on a remote node when using Serialization.jl (in Distributed.jl
 # and elsewhere)
 function Serialization.serialize(s::AbstractSerializer,
-    rgf::RuntimeGeneratedFunction{argnames, cache_tag,
-        context_tag, id, B}) where {
-    argnames,
-    cache_tag,
-    context_tag,
-    id,
-    B,
+        rgf::RuntimeGeneratedFunction{argnames, cache_tag,
+            context_tag, id, B}) where {
+        argnames,
+        cache_tag,
+        context_tag,
+        id,
+        B
 }
     body = _lookup_body(cache_tag, id)
     Serialization.serialize_type(s,
@@ -350,14 +351,14 @@ function Serialization.serialize(s::AbstractSerializer,
 end
 
 function Serialization.deserialize(s::AbstractSerializer,
-    ::Type{
-        <:RuntimeGeneratedFunction{argnames, cache_tag,
+        ::Type{
+            <:RuntimeGeneratedFunction{argnames, cache_tag,
             context_tag, id, B}}) where {
-    argnames,
-    cache_tag,
-    context_tag,
-    id,
-    B,
+        argnames,
+        cache_tag,
+        context_tag,
+        id,
+        B
 }
     body = deserialize(s)
     cached_body = _cache_body(cache_tag, id, body)

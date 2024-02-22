@@ -153,7 +153,6 @@ using RuntimeGeneratedFunctions
 f = @RuntimeGeneratedFunction(:(x -> x + y))
 end)
 
-
 ex = :(x -> (y -> x + y))
 @test @RuntimeGeneratedFunction(ex)(2)(3) === 5
 

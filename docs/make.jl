@@ -12,7 +12,7 @@ makedocs(sitename = "RuntimeGeneratedFunctions.jl",
         canonical = "https://docs.sciml.ai/RuntimeGeneratedFunctions/stable/"),
     pages = [
         "RuntimeGeneratedFunctions.jl: Efficient Staged Compilation" => "index.md",
-        "API" => "api.md",
+        "API" => "api.md"
     ])
 
 deploydocs(;
