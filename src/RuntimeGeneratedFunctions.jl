@@ -339,7 +339,7 @@ function get_expression(rgf::RuntimeGeneratedFunction{argnames, cache_tag,
     id,
     B
 }
-    body = _lookup_body(cache_tag, id)
+    func_expr = Expr(:->, Expr(:tuple, argnames...), _lookup_body(cache_tag, id))
 end
 
 # We write an explicit serialize() and deserialize() here to manage caching of

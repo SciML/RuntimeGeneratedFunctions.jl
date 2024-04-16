@@ -170,43 +170,41 @@ command on the function we want. For example, for the in-place function:
 ```julia
 julia> RuntimeGeneratedFunctions.get_expression(prob.f.f.f_iip)
 
-#=
-quote
-    #= C:\Users\accou\.julia\packages\SymbolicUtils\c0xQb\src\code.jl:373 =#
-    #= C:\Users\accou\.julia\packages\SymbolicUtils\c0xQb\src\code.jl:374 =#
-    #= C:\Users\accou\.julia\packages\SymbolicUtils\c0xQb\src\code.jl:375 =#
-    begin
-        begin
-            begin
-                #= C:\Users\accou\.julia\packages\Symbolics\HIg7O\src\build_function.jl:546 =#
-                #= C:\Users\accou\.julia\packages\SymbolicUtils\c0xQb\src\code.jl:422 =# @inbounds begin
-                        #= C:\Users\accou\.julia\packages\SymbolicUtils\c0xQb\src\code.jl:418 =#
-                        ˍ₋out[1] = (/)((+)(1, (*)(-1, ˍ₋arg1[1])), ˍ₋arg2[1])
-                        #= C:\Users\accou\.julia\packages\SymbolicUtils\c0xQb\src\code.jl:420 =#
-                        nothing
-                    end
-            end
-        end
-    end
-end
-=#
+:((ˍ₋out, ˍ₋arg1, ˍ₋arg2, t)->begin
+          #= C:\Users\accou\.julia\packages\SymbolicUtils\c0xQb\src\code.jl:373 =#
+          #= C:\Users\accou\.julia\packages\SymbolicUtils\c0xQb\src\code.jl:374 =#
+          #= C:\Users\accou\.julia\packages\SymbolicUtils\c0xQb\src\code.jl:375 =#
+          begin
+              begin
+                  begin
+                      #= C:\Users\accou\.julia\packages\Symbolics\HIg7O\src\build_function.jl:546 =#
+                      #= C:\Users\accou\.julia\packages\SymbolicUtils\c0xQb\src\code.jl:422 =# @inbounds begin
+                              #= C:\Users\accou\.julia\packages\SymbolicUtils\c0xQb\src\code.jl:418 =#
+                              ˍ₋out[1] = (/)((+)(1, (*)(-1, ˍ₋arg1[1])), ˍ₋arg2[1])
+                              #= C:\Users\accou\.julia\packages\SymbolicUtils\c0xQb\src\code.jl:420 =#
+                              nothing
+                          end
+                  end
+              end
+          end
+      end)
 ```
 
 or the out-of-place function:
 
 ```julia
 julia> RuntimeGeneratedFunctions.get_expression(prob.f.f.f_oop)
-quote
-    #= C:\Users\accou\.julia\packages\SymbolicUtils\c0xQb\src\code.jl:373 =#
-    #= C:\Users\accou\.julia\packages\SymbolicUtils\c0xQb\src\code.jl:374 =#
-    #= C:\Users\accou\.julia\packages\SymbolicUtils\c0xQb\src\code.jl:375 =#
-    begin
-        begin
-            begin
-                #= C:\Users\accou\.julia\packages\SymbolicUtils\c0xQb\src\code.jl:468 =#
-                (SymbolicUtils.Code.create_array)(typeof(ˍ₋arg1), nothing, Val{1}(), Val{(1,)}(), (/)((+)(1, (*)(-1, ˍ₋arg1[1])), ˍ₋arg2[1]))
-            end
-        end
-    end
-end
+:((ˍ₋arg1, ˍ₋arg2, t)->begin
+          #= C:\Users\accou\.julia\packages\SymbolicUtils\c0xQb\src\code.jl:373 =#
+          #= C:\Users\accou\.julia\packages\SymbolicUtils\c0xQb\src\code.jl:374 =#
+          #= C:\Users\accou\.julia\packages\SymbolicUtils\c0xQb\src\code.jl:375 =#
+          begin
+              begin
+                  begin
+                      #= C:\Users\accou\.julia\packages\SymbolicUtils\c0xQb\src\code.jl:468 =#
+                      (SymbolicUtils.Code.create_array)(typeof(ˍ₋arg1), nothing, Val{1}(), Val{(1,)}(), (/)((+)(1, (*)(-1, ˍ₋arg1[1])), ˍ₋arg2[1]))
+                  end
+              end
+          end
+      end)
 ```
