@@ -331,6 +331,17 @@ function closures_to_opaque(ex::Expr, return_type = nothing)
     return Expr(head, Any[closures_to_opaque(x, return_type) for x in args]...)
 end
 
+function get_expression(rgf::RuntimeGeneratedFunction{argnames, cache_tag,
+        context_tag, id, B}) where {
+    argnames,
+    cache_tag,
+    context_tag,
+    id,
+    B
+}
+    func_expr = Expr(:->, Expr(:tuple, argnames...), _lookup_body(cache_tag, id))
+end
+
 # We write an explicit serialize() and deserialize() here to manage caching of
 # the body on a remote node when using Serialization.jl (in Distributed.jl
 # and elsewhere)

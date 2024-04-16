@@ -110,3 +110,101 @@ end
 f = g()
 @show f(1)
 ```
+
+## Retrieving Expressions
+
+From a constructed RuntimeGeneratedFunction, you can retrieve the expressions using the
+`RuntimeGeneratedFunctions.get_expression` command. For example:
+
+```julia
+ex = :((x) -> x^2)
+rgf = @RuntimeGeneratedFunction(ex)
+julia> RuntimeGeneratedFunctions.get_expression(rgf)
+#=
+quote
+    #= c:\Users\accou\OneDrive\Computer\Desktop\test.jl:39 =#
+    x ^ 2
+end
+=#
+```
+
+This can be used to get the expression even if `drop_expr` has been performed.
+
+### Example: Retrieving Expressions from ModelingToolkit.jl
+
+[ModelingToolkit.jl](https://github.com/SciML/ModelingToolkit.jl) uses
+RuntimeGeneratedFunctions.jl for the construction of its functions to avoid issues of
+world-age. Take for example its tutorial:
+
+```julia
+using ModelingToolkit, RuntimeGeneratedFunctions
+using ModelingToolkit: t_nounits as t, D_nounits as D
+
+@mtkmodel FOL begin
+    @parameters begin
+        τ # parameters
+    end
+    @variables begin
+        x(t) # dependent variables
+    end
+    @equations begin
+        D(x) ~ (1 - x) / τ
+    end
+end
+
+using DifferentialEquations: solve
+@mtkbuild fol = FOL()
+prob = ODEProblem(fol, [fol.x => 0.0], (0.0, 10.0), [fol.τ => 3.0])
+```
+
+If we check the function:
+
+```julia
+julia> prob.f
+(::ODEFunction{true, SciMLBase.AutoSpecialize, ModelingToolkit.var"#f#697"{RuntimeGeneratedFunction{(:ˍ₋arg1, :ˍ₋arg2, :t), ModelingToolkit.var"#_RGF_ModTag", ModelingToolkit.var"#_RGF_ModTag", (0x2cce5cf2, 0xd20b0d73, 0xd14ed8a6, 0xa4d56c4f, 0x72958ea1), Nothing}, RuntimeGeneratedFunction{(:ˍ₋out, :ˍ₋arg1, :ˍ₋arg2, :t), ModelingToolkit.var"#_RGF_ModTag", ModelingToolkit.var"#_RGF_ModTag", (0x7f3c227e, 0x8f116bb1, 0xb3528ad5, 0x9c57c605, 0x60f580c3), Nothing}}, UniformScaling{Bool}, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, ModelingToolkit.var"#852#generated_observed#706"{Bool, ODESystem, Dict{Any, Any}, Vector{Any}}, Nothing, ODESystem, Nothing, Nothing}) (generic function with 1 method)
+```
+
+It's a RuntimeGeneratedFunction. We can find the code for this system using the retrieval
+command on the function we want. For example, for the in-place function:
+
+```julia
+julia> RuntimeGeneratedFunctions.get_expression(prob.f.f.f_iip)
+
+:((ˍ₋out, ˍ₋arg1, ˍ₋arg2, t)->begin
+          #= C:\Users\accou\.julia\packages\SymbolicUtils\c0xQb\src\code.jl:373 =#
+          #= C:\Users\accou\.julia\packages\SymbolicUtils\c0xQb\src\code.jl:374 =#
+          #= C:\Users\accou\.julia\packages\SymbolicUtils\c0xQb\src\code.jl:375 =#
+          begin
+              begin
+                  begin
+                      #= C:\Users\accou\.julia\packages\Symbolics\HIg7O\src\build_function.jl:546 =#
+                      #= C:\Users\accou\.julia\packages\SymbolicUtils\c0xQb\src\code.jl:422 =# @inbounds begin
+                              #= C:\Users\accou\.julia\packages\SymbolicUtils\c0xQb\src\code.jl:418 =#
+                              ˍ₋out[1] = (/)((+)(1, (*)(-1, ˍ₋arg1[1])), ˍ₋arg2[1])
+                              #= C:\Users\accou\.julia\packages\SymbolicUtils\c0xQb\src\code.jl:420 =#
+                              nothing
+                          end
+                  end
+              end
+          end
+      end)
+```
+
+or the out-of-place function:
+
+```julia
+julia> RuntimeGeneratedFunctions.get_expression(prob.f.f.f_oop)
+:((ˍ₋arg1, ˍ₋arg2, t)->begin
+          #= C:\Users\accou\.julia\packages\SymbolicUtils\c0xQb\src\code.jl:373 =#
+          #= C:\Users\accou\.julia\packages\SymbolicUtils\c0xQb\src\code.jl:374 =#
+          #= C:\Users\accou\.julia\packages\SymbolicUtils\c0xQb\src\code.jl:375 =#
+          begin
+              begin
+                  begin
+                      #= C:\Users\accou\.julia\packages\SymbolicUtils\c0xQb\src\code.jl:468 =#
+                      (SymbolicUtils.Code.create_array)(typeof(ˍ₋arg1), nothing, Val{1}(), Val{(1,)}(), (/)((+)(1, (*)(-1, ˍ₋arg1[1])), ˍ₋arg2[1]))
+                  end
+              end
+          end
+      end)
+```
