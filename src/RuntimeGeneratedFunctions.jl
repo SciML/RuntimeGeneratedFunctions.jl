@@ -306,7 +306,7 @@ function closures_to_opaque(ex::Expr, return_type = nothing)
         fdef[:body] = body
         name = get(fdef, :name, nothing)
         name !== nothing && delete!(fdef, :name)
-        _ex = Expr(:opaque_closure, combinedef(fdef))
+        _ex = Expr(:macrocall, Symbol("@opaque"), LineNumberNode(0), combinedef(fdef))
         # TODO: emit named opaque closure for better stacktraces
         # (ref https://github.com/JuliaLang/julia/pull/40242)
         if name !== nothing
