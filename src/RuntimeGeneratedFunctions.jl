@@ -55,7 +55,9 @@ struct RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id, B} <: Func
         def = splitdef(ex)
         args = normalize_args(get(def, :args, Symbol[]))
         body = def[:body]
-        body = closures_to_opaque(body)
+        if opaque_closures
+            body = closures_to_opaque(body)
+        end
         id = expr_to_id(body)
         cached_body = _cache_body(cache_tag, id, body)
         new{Tuple(args), cache_tag, context_tag, id, typeof(cached_body)}(cached_body)
