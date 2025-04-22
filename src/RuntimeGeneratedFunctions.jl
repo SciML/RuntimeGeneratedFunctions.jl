@@ -1,6 +1,7 @@
 module RuntimeGeneratedFunctions
 
 using ExprTools, Serialization, SHA
+import Base.Experimental: @opaque
 
 export RuntimeGeneratedFunction, @RuntimeGeneratedFunction, drop_expr
 
@@ -34,9 +35,7 @@ If `opaque_closures` is `true`, all closures in `function_expression` are
 converted to
 [opaque closures](https://github.com/JuliaLang/julia/pull/37849#issue-496641229).
 This allows for the use of closures and generators inside the generated function,
-but may not work in all cases due to slightly different semantics. This feature
-requires Julia 1.7.
-
+but may not work in all cases due to slightly different semantics.
 # Examples
 ```
 RuntimeGeneratedFunctions.init(@__MODULE__) # Required at module top-level
@@ -56,8 +55,7 @@ struct RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id, B} <: Func
         def = splitdef(ex)
         args = normalize_args(get(def, :args, Symbol[]))
         body = def[:body]
-        if opaque_closures && isdefined(Base, :Experimental) &&
-           isdefined(Base.Experimental, Symbol("@opaque"))
+        if opaque_closures
             body = closures_to_opaque(body)
         end
         id = expr_to_id(body)
@@ -306,7 +304,8 @@ function closures_to_opaque(ex::Expr, return_type = nothing)
         fdef[:body] = body
         name = get(fdef, :name, nothing)
         name !== nothing && delete!(fdef, :name)
-        _ex = Expr(:opaque_closure, combinedef(fdef))
+        opaque = Expr(:., Expr(:., :Base, QuoteNode(:Experimental)), QuoteNode(Symbol("@opaque")))
+        _ex = Expr(:macrocall, opaque, LineNumberNode(0), combinedef(fdef))
         # TODO: emit named opaque closure for better stacktraces
         # (ref https://github.com/JuliaLang/julia/pull/40242)
         if name !== nothing
