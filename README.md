@@ -15,7 +15,7 @@ builds functions in a way that avoids `eval`.
 
 Note that `RuntimeGeneratedFunction` does not handle closures. Please use the
 [GeneralizedGenerated.jl](https://github.com/JuliaStaging/GeneralizedGenerated.jl)
-package for more fixable staged programming. While `GeneralizedGenerated.jl` is
+package for more flexible staged programming. While `GeneralizedGenerated.jl` is
 more powerful, `RuntimeGeneratedFunctions.jl` handles large expressions better.
 
 ## Tutorials and Documentation
