@@ -376,6 +376,9 @@ function Serialization.deserialize(s::AbstractSerializer,
     B === Nothing ? drop_expr(f) : f
 end
 
+# achieve deepcopy(f)===f behavior similar to "normal" julia functions
+Base.deepcopy_internal(f::RuntimeGeneratedFunction, stackdict::IdDict) = f
+
 @specialize
 
 end
