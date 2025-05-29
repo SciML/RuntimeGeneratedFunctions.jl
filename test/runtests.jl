@@ -186,6 +186,6 @@ deserialized_f, deserialized_g = deserialize(buf)
 @test deserialized_g.body isa Nothing
 
 # deepcopy
-f = @RuntimeGeneratedFunction(:(x -> [x, x+1]))
-@test deepcopy(f) == f
-@test deepcopy(f) === f
+ff = @RuntimeGeneratedFunction(:(x -> [x, x+1]))
+@test deepcopy(f) == ff
+@test deepcopy(f) === ff
