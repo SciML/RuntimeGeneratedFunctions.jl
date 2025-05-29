@@ -184,3 +184,8 @@ deserialized_f, deserialized_g = deserialize(buf)
 @test deserialized_f.body isa Expr
 @test deserialized_g(12) == "Serialization with dropped body. y=12"
 @test deserialized_g.body isa Nothing
+
+# deepcopy
+ff = @RuntimeGeneratedFunction(:(x -> [x, x+1]))
+@test deepcopy(ff) == ff
+@test deepcopy(ff) === ff
