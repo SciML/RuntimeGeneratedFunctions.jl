@@ -244,7 +244,7 @@ version = "0.1.0"
 deps = ["ExprTools", "SHA", "Serialization"]
 path = "/home/runner/work/RuntimeGeneratedFunctions.jl/RuntimeGeneratedFunctions.jl"
 uuid = "7e49a35a-f44a-4d26-94aa-eba1b4ca6b47"
-version = "0.5.14"
+version = "0.5.15"
 
 [[deps.SHA]]
 uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
