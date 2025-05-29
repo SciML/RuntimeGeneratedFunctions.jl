@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>RuntimeGeneratedFunctions.jl: Efficient Staged Compilation · RuntimeGeneratedFunctions.jl</title><meta name="title" content="RuntimeGeneratedFunctions.jl: Efficient Staged Compilation · RuntimeGeneratedFunctions.jl"/><meta property="og:title" content="RuntimeGeneratedFunctions.jl: Efficient Staged Compilation · RuntimeGeneratedFunctions.jl"/><meta property="twitter:title" content="RuntimeGeneratedFunctions.jl: Efficient Staged Compilation · RuntimeGeneratedFunctions.jl"/><meta name="description" content="Documentation for RuntimeGeneratedFunctions.jl."/><meta property="og:description" content="Documentation for RuntimeGeneratedFunctions.jl."/><meta property="twitter:description" content="Documentation for RuntimeGeneratedFunctions.jl."/><meta property="og:url" content="https://docs.sciml.ai/RuntimeGeneratedFunctions/stable/"/><meta property="twitter:url" content="https://docs.sciml.ai/RuntimeGeneratedFunctions/stable/"/><link rel="canonical" href="https://docs.sciml.ai/RuntimeGeneratedFunctions/stable/"/><script data-outdated-warner src="assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="assets/documenter.js"></script><script src="search_index.js"></script><script src="siteinfo.js"></script><script src="../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="assets/themeswap.js"></script><link href="assets/favicon.ico" rel="icon" type="image/x-icon"/></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href><img src="assets/logo.png" alt="RuntimeGeneratedFunctions.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href>RuntimeGeneratedFunctions.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li class="is-active"><a class="tocitem" href>RuntimeGeneratedFunctions.jl: Efficient Staged Compilation</a><ul class="internal"><li><a class="tocitem" href="#Tutorials-and-Documentation"><span>Tutorials and Documentation</span></a></li><li><a class="tocitem" href="#Simple-Example"><span>Simple Example</span></a></li><li><a class="tocitem" href="#Changing-how-global-symbols-are-looked-up"><span>Changing how global symbols are looked up</span></a></li><li><a class="tocitem" href="#Precompilation-and-setting-the-function-expression-cache"><span>Precompilation and setting the function expression cache</span></a></li><li><a class="tocitem" href="#Retrieving-Expressions"><span>Retrieving Expressions</span></a></li><li><a class="tocitem" href="#Reproducibility"><span>Reproducibility</span></a></li></ul></li><li><a class="tocitem" href="api/">API</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>RuntimeGeneratedFunctions.jl: Efficient Staged Compilation</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>RuntimeGeneratedFunctions.jl: Efficient Staged Compilation</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/SciML/RuntimeGeneratedFunctions.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/SciML/RuntimeGeneratedFunctions.jl/blob/master/docs/src/index.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="RuntimeGeneratedFunctions.jl:-Generate-functions-at-runtime"><a class="docs-heading-anchor" href="#RuntimeGeneratedFunctions.jl:-Generate-functions-at-runtime">RuntimeGeneratedFunctions.jl: Generate functions at runtime</a><a id="RuntimeGeneratedFunctions.jl:-Generate-functions-at-runtime-1"></a><a class="docs-heading-anchor-permalink" href="#RuntimeGeneratedFunctions.jl:-Generate-functions-at-runtime" title="Permalink"></a></h1><p><code>RuntimeGeneratedFunctions</code> are functions generated at runtime without world-age issues and with the full performance of a standard Julia anonymous function. This builds functions in a way that avoids <code>eval</code>.</p><p>Note that <code>RuntimeGeneratedFunction</code> does not handle closures. Please use the <a href="https://github.com/JuliaStaging/GeneralizedGenerated.jl">GeneralizedGenerated.jl</a> package for more fixable staged programming. While <code>GeneralizedGenerated.jl</code> is more powerful, <code>RuntimeGeneratedFunctions.jl</code> handles large expressions better.</p><h2 id="Tutorials-and-Documentation"><a class="docs-heading-anchor" href="#Tutorials-and-Documentation">Tutorials and Documentation</a><a id="Tutorials-and-Documentation-1"></a><a class="docs-heading-anchor-permalink" href="#Tutorials-and-Documentation" title="Permalink"></a></h2><p>For information on using the package, <a href="https://docs.sciml.ai/RuntimeGeneratedFunctions/stable/">see the stable documentation</a>. Use the <a href="https://docs.sciml.ai/RuntimeGeneratedFunctions/dev/">in-development documentation</a> for the version of the documentation, which contains the unreleased features.</p><h2 id="Simple-Example"><a class="docs-heading-anchor" href="#Simple-Example">Simple Example</a><a id="Simple-Example-1"></a><a class="docs-heading-anchor-permalink" href="#Simple-Example" title="Permalink"></a></h2><p>Here&#39;s an example showing how to construct and immediately call a runtime generated function:</p><pre><code class="language-julia hljs">using RuntimeGeneratedFunctions
+RuntimeGeneratedFunctions.init(@__MODULE__)
+
+function no_worldage()
+    ex = :(function f(_du, _u, _p, _t)
+        @inbounds _du[1] = _u[1]
+        @inbounds _du[2] = _u[2]
+        nothing
+    end)
+    f1 = @RuntimeGeneratedFunction(ex)
+    du = rand(2)
+    u = rand(2)
+    p = nothing
+    t = nothing
+    f1(du, u, p, t)
+end
+no_worldage()</code></pre><h2 id="Changing-how-global-symbols-are-looked-up"><a class="docs-heading-anchor" href="#Changing-how-global-symbols-are-looked-up">Changing how global symbols are looked up</a><a id="Changing-how-global-symbols-are-looked-up-1"></a><a class="docs-heading-anchor-permalink" href="#Changing-how-global-symbols-are-looked-up" title="Permalink"></a></h2><p>If you want to use helper functions or global variables from a different module within your function expression, you&#39;ll need to pass a <code>context_module</code> to the <code>@RuntimeGeneratedFunction</code> constructor. For example</p><pre><code class="language-julia hljs">RuntimeGeneratedFunctions.init(@__MODULE__)
+
+module A
+using RuntimeGeneratedFunctions
+RuntimeGeneratedFunctions.init(A)
+helper_function(x) = x + 1
+end
+
+function g()
+    expression = :(f(x) = helper_function(x))
+    # context module is `A` so that `helper_function` can be found.
+    f = @RuntimeGeneratedFunction(A, expression)
+    @show f(1)
+end</code></pre><h2 id="Precompilation-and-setting-the-function-expression-cache"><a class="docs-heading-anchor" href="#Precompilation-and-setting-the-function-expression-cache">Precompilation and setting the function expression cache</a><a id="Precompilation-and-setting-the-function-expression-cache-1"></a><a class="docs-heading-anchor-permalink" href="#Precompilation-and-setting-the-function-expression-cache" title="Permalink"></a></h2><p>For technical reasons, RuntimeGeneratedFunctions needs to cache the function expression in a global variable within some module. This is normally transparent to the user, but if the <code>RuntimeGeneratedFunction</code> is evaluated during module precompilation, the cache module must be explicitly set to the module currently being precompiled. This is relevant for helper functions in some module, which construct a RuntimeGeneratedFunction on behalf of the user. For example, in the following code, any third party user of <code>HelperModule.construct_rgf()</code> user needs to pass their own module as the <code>cache_module</code> if they want the returned function to work after precompilation:</p><pre><code class="language-julia hljs">RuntimeGeneratedFunctions.init(@__MODULE__)
+
+# Imagine HelperModule is in a separate package and will be precompiled
+# separately.
+module HelperModule
+using RuntimeGeneratedFunctions
+RuntimeGeneratedFunctions.init(HelperModule)
+
+function construct_rgf(cache_module, context_module, ex)
+    ex = :((x) -&gt; $ex^2 + x)
+    RuntimeGeneratedFunction(cache_module, context_module, ex)
+end
+end
+
+function g()
+    ex = :(x + 1)
+    # Here cache_module is set to the module currently being compiled so that
+    # the returned RGF works with Julia&#39;s module precompilation system.
+    HelperModule.construct_rgf(@__MODULE__, @__MODULE__, ex)
+end
+
+f = g()
+@show f(1)</code></pre><h2 id="Retrieving-Expressions"><a class="docs-heading-anchor" href="#Retrieving-Expressions">Retrieving Expressions</a><a id="Retrieving-Expressions-1"></a><a class="docs-heading-anchor-permalink" href="#Retrieving-Expressions" title="Permalink"></a></h2><p>From a constructed RuntimeGeneratedFunction, you can retrieve the expressions using the <code>RuntimeGeneratedFunctions.get_expression</code> command. For example:</p><pre><code class="language-julia hljs">ex = :((x) -&gt; x^2)
+rgf = @RuntimeGeneratedFunction(ex)
+julia&gt; RuntimeGeneratedFunctions.get_expression(rgf)
+:((x,)-&gt;begin
+          #= REPL[14]:1 =#
+          x ^ 2
+      end)</code></pre><p>This can be used to get the expression even if <code>drop_expr</code> has been performed.</p><h3 id="Example:-Retrieving-Expressions-from-ModelingToolkit.jl"><a class="docs-heading-anchor" href="#Example:-Retrieving-Expressions-from-ModelingToolkit.jl">Example: Retrieving Expressions from ModelingToolkit.jl</a><a id="Example:-Retrieving-Expressions-from-ModelingToolkit.jl-1"></a><a class="docs-heading-anchor-permalink" href="#Example:-Retrieving-Expressions-from-ModelingToolkit.jl" title="Permalink"></a></h3><p><a href="https://github.com/SciML/ModelingToolkit.jl">ModelingToolkit.jl</a> uses RuntimeGeneratedFunctions.jl for the construction of its functions to avoid issues of world-age. Take for example its tutorial:</p><pre><code class="language-julia hljs">using ModelingToolkit, RuntimeGeneratedFunctions
+using ModelingToolkit: t_nounits as t, D_nounits as D
+
+@mtkmodel FOL begin
+    @parameters begin
+        τ # parameters
+    end
+    @variables begin
+        x(t) # dependent variables
+    end
+    @equations begin
+        D(x) ~ (1 - x) / τ
+    end
+end
+
+using DifferentialEquations: solve
+@mtkbuild fol = FOL()
+prob = ODEProblem(fol, [fol.x =&gt; 0.0], (0.0, 10.0), [fol.τ =&gt; 3.0])</code></pre><p>If we check the function:</p><pre><code class="language-julia hljs">julia&gt; prob.f
+(::ODEFunction{true, SciMLBase.AutoSpecialize, ModelingToolkit.var&quot;#f#697&quot;{RuntimeGeneratedFunction{(:ˍ₋arg1, :ˍ₋arg2, :t), ModelingToolkit.var&quot;#_RGF_ModTag&quot;, ModelingToolkit.var&quot;#_RGF_ModTag&quot;, (0x2cce5cf2, 0xd20b0d73, 0xd14ed8a6, 0xa4d56c4f, 0x72958ea1), Nothing}, RuntimeGeneratedFunction{(:ˍ₋out, :ˍ₋arg1, :ˍ₋arg2, :t), ModelingToolkit.var&quot;#_RGF_ModTag&quot;, ModelingToolkit.var&quot;#_RGF_ModTag&quot;, (0x7f3c227e, 0x8f116bb1, 0xb3528ad5, 0x9c57c605, 0x60f580c3), Nothing}}, UniformScaling{Bool}, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, ModelingToolkit.var&quot;#852#generated_observed#706&quot;{Bool, ODESystem, Dict{Any, Any}, Vector{Any}}, Nothing, ODESystem, Nothing, Nothing}) (generic function with 1 method)</code></pre><p>It&#39;s a RuntimeGeneratedFunction. We can find the code for this system using the retrieval command on the function we want. For example, for the in-place function:</p><pre><code class="language-julia hljs">julia&gt; RuntimeGeneratedFunctions.get_expression(prob.f.f.f_iip)
+
+:((ˍ₋out, ˍ₋arg1, ˍ₋arg2, t)-&gt;begin
+          #= C:\Users\accou\.julia\packages\SymbolicUtils\c0xQb\src\code.jl:373 =#
+          #= C:\Users\accou\.julia\packages\SymbolicUtils\c0xQb\src\code.jl:374 =#
+          #= C:\Users\accou\.julia\packages\SymbolicUtils\c0xQb\src\code.jl:375 =#
+          begin
+              begin
+                  begin
+                      #= C:\Users\accou\.julia\packages\Symbolics\HIg7O\src\build_function.jl:546 =#
+                      #= C:\Users\accou\.julia\packages\SymbolicUtils\c0xQb\src\code.jl:422 =# @inbounds begin
+                              #= C:\Users\accou\.julia\packages\SymbolicUtils\c0xQb\src\code.jl:418 =#
+                              ˍ₋out[1] = (/)((+)(1, (*)(-1, ˍ₋arg1[1])), ˍ₋arg2[1])
+                              #= C:\Users\accou\.julia\packages\SymbolicUtils\c0xQb\src\code.jl:420 =#
+                              nothing
+                          end
+                  end
+              end
+          end
+      end)</code></pre><p>or the out-of-place function:</p><pre><code class="language-julia hljs">julia&gt; RuntimeGeneratedFunctions.get_expression(prob.f.f.f_oop)
+:((ˍ₋arg1, ˍ₋arg2, t)-&gt;begin
+          #= C:\Users\accou\.julia\packages\SymbolicUtils\c0xQb\src\code.jl:373 =#
+          #= C:\Users\accou\.julia\packages\SymbolicUtils\c0xQb\src\code.jl:374 =#
+          #= C:\Users\accou\.julia\packages\SymbolicUtils\c0xQb\src\code.jl:375 =#
+          begin
+              begin
+                  begin
+                      #= C:\Users\accou\.julia\packages\SymbolicUtils\c0xQb\src\code.jl:468 =#
+                      (SymbolicUtils.Code.create_array)(typeof(ˍ₋arg1), nothing, Val{1}(), Val{(1,)}(), (/)((+)(1, (*)(-1, ˍ₋arg1[1])), ˍ₋arg2[1]))
+                  end
+              end
+          end
+      end)</code></pre><h2 id="Reproducibility"><a class="docs-heading-anchor" href="#Reproducibility">Reproducibility</a><a id="Reproducibility-1"></a><a class="docs-heading-anchor-permalink" href="#Reproducibility" title="Permalink"></a></h2><details><summary>The documentation of this SciML package was built using these direct dependencies,</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Status `~/work/RuntimeGeneratedFunctions.jl/RuntimeGeneratedFunctions.jl/docs/Project.toml`
+  [e30172f5] Documenter v1.11.4
+  [7e49a35a] RuntimeGeneratedFunctions v0.5.15 `~/work/RuntimeGeneratedFunctions.jl/RuntimeGeneratedFunctions.jl`</code></pre></details><details><summary>and using this machine and Julia version.</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Julia Version 1.11.5
+Commit 760b2e5b739 (2025-04-14 06:53 UTC)
+Build Info:
+  Official https://julialang.org/ release
+Platform Info:
+  OS: Linux (x86_64-linux-gnu)
+  CPU: 4 × AMD EPYC 7763 64-Core Processor
+  WORD_SIZE: 64
+  LLVM: libLLVM-16.0.6 (ORCJIT, znver3)
+Threads: 1 default, 0 interactive, 1 GC (on 4 virtual cores)</code></pre></details><details><summary>A more complete overview of all dependencies and their versions is also provided.</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Status `~/work/RuntimeGeneratedFunctions.jl/RuntimeGeneratedFunctions.jl/docs/Manifest.toml`
+  [a4c015fc] ANSIColoredPrinters v0.0.1
+  [1520ce14] AbstractTrees v0.4.5
+  [944b1d66] CodecZlib v0.7.8
+  [ffbed154] DocStringExtensions v0.9.4
+  [e30172f5] Documenter v1.11.4
+  [e2ba6199] ExprTools v0.1.10
+  [d7ba0133] Git v1.4.0
+  [b5f81e59] IOCapture v0.2.5
+  [692b3bcd] JLLWrappers v1.7.0
+  [682c06a0] JSON v0.21.4
+  [0e77f7df] LazilyInitializedFields v1.3.0
+  [d0879d2d] MarkdownAST v0.1.2
+  [69de0a69] Parsers v2.8.3
+⌅ [aea7be01] PrecompileTools v1.2.1
+  [21216c6a] Preferences v1.4.3
+  [2792f1a3] RegistryInstances v0.1.0
+  [7e49a35a] RuntimeGeneratedFunctions v0.5.15 `~/work/RuntimeGeneratedFunctions.jl/RuntimeGeneratedFunctions.jl`
+  [3bb67fe8] TranscodingStreams v0.11.3
+  [2e619515] Expat_jll v2.6.5+0
+  [f8c6e375] Git_jll v2.49.0+0
+  [94ce4f54] Libiconv_jll v1.18.0+0
+  [9bd350c2] OpenSSH_jll v10.0.1+0
+  [458c3c95] OpenSSL_jll v3.5.0+0
+  [0dad84c5] ArgTools v1.1.2
+  [56f22d72] Artifacts v1.11.0
+  [2a0f44e3] Base64 v1.11.0
+  [ade2ca70] Dates v1.11.0
+  [f43a241f] Downloads v1.6.0
+  [7b1f6079] FileWatching v1.11.0
+  [b77e0a4c] InteractiveUtils v1.11.0
+  [b27032c2] LibCURL v0.6.4
+  [76f85450] LibGit2 v1.11.0
+  [8f399da3] Libdl v1.11.0
+  [56ddb016] Logging v1.11.0
+  [d6f4376e] Markdown v1.11.0
+  [a63ad114] Mmap v1.11.0
+  [ca575930] NetworkOptions v1.2.0
+  [44cfe95a] Pkg v1.11.0
+  [de0858da] Printf v1.11.0
+  [3fa0cd96] REPL v1.11.0
+  [9a3f8284] Random v1.11.0
+  [ea8e919c] SHA v0.7.0
+  [9e88b42a] Serialization v1.11.0
+  [6462fe0b] Sockets v1.11.0
+  [f489334b] StyledStrings v1.11.0
+  [fa267f1f] TOML v1.0.3
+  [a4e569a6] Tar v1.10.0
+  [8dfed614] Test v1.11.0
+  [cf7118a7] UUIDs v1.11.0
+  [4ec0a83e] Unicode v1.11.0
+  [deac9b47] LibCURL_jll v8.6.0+0
+  [e37daf67] LibGit2_jll v1.7.2+0
+  [29816b5a] LibSSH2_jll v1.11.0+1
+  [c8ffd9c3] MbedTLS_jll v2.28.6+0
+  [14a3606d] MozillaCACerts_jll v2023.12.12
+  [efcefdf7] PCRE2_jll v10.42.0+1
+  [83775a58] Zlib_jll v1.2.13+1
+  [8e850ede] nghttp2_jll v1.59.0+0
+  [3f19e933] p7zip_jll v17.4.0+2
+Info Packages marked with ⌅ have new versions available but compatibility constraints restrict them from upgrading. To see why use `status --outdated -m`</code></pre></details><p>You can also download the <a href="https://github.com/SciML/RuntimeGeneratedFunctions.jl/tree/gh-pages/v0.5.15/assets/Manifest.toml">manifest</a> file and the <a href="https://github.com/SciML/RuntimeGeneratedFunctions.jl/tree/gh-pages/v0.5.15/assets/Project.toml">project</a> file.</p></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="api/">API »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.11.4 on <span class="colophon-date" title="Thursday 29 May 2025 02:58">Thursday 29 May 2025</span>. Using Julia version 1.11.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
