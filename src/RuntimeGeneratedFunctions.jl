@@ -304,7 +304,8 @@ function closures_to_opaque(ex::Expr, return_type = nothing)
         fdef[:body] = body
         name = get(fdef, :name, nothing)
         name !== nothing && delete!(fdef, :name)
-        opaque = Expr(:., Expr(:., :Base, QuoteNode(:Experimental)), QuoteNode(Symbol("@opaque")))
+        opaque = Expr(
+            :., Expr(:., :Base, QuoteNode(:Experimental)), QuoteNode(Symbol("@opaque")))
         _ex = Expr(:macrocall, opaque, LineNumberNode(0), combinedef(fdef))
         # TODO: emit named opaque closure for better stacktraces
         # (ref https://github.com/JuliaLang/julia/pull/40242)
@@ -332,11 +333,11 @@ end
 
 function get_expression(rgf::RuntimeGeneratedFunction{argnames, cache_tag,
         context_tag, id, B}) where {
-    argnames,
-    cache_tag,
-    context_tag,
-    id,
-    B
+        argnames,
+        cache_tag,
+        context_tag,
+        id,
+        B
 }
     func_expr = Expr(:->, Expr(:tuple, argnames...), _lookup_body(cache_tag, id))
 end

@@ -108,13 +108,9 @@ From a constructed RuntimeGeneratedFunction, you can retrieve the expressions us
 `RuntimeGeneratedFunctions.get_expression` command. For example:
 
 ```julia
+julia> RuntimeGeneratedFunctions.get_expression(rgf)
 ex = :((x) -> x^2)
 rgf = @RuntimeGeneratedFunction(ex)
-julia> RuntimeGeneratedFunctions.get_expression(rgf)
-:((x,)->begin
-          #= REPL[14]:1 =#
-          x ^ 2
-      end)
 ```
 
 This can be used to get the expression even if `drop_expr` has been performed.
@@ -197,7 +193,6 @@ julia> RuntimeGeneratedFunctions.get_expression(prob.f.f.f_oop)
           end
       end)
 ```
-
 
 ## Reproducibility
 
