@@ -48,7 +48,9 @@ end
 ```
 """
 
-"$_rgf_docs"
+"""
+$_rgf_docs
+"""
 struct RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id, B} <: Function
     body::B
     function RuntimeGeneratedFunction(cache_tag, context_tag, ex; opaque_closures = true)
@@ -117,7 +119,9 @@ function RuntimeGeneratedFunction(cache_module::Module, context_module::Module, 
         opaque_closures = opaque_closures)
 end
 
-"$_rgf_docs"
+"""
+$_rgf_docs
+"""
 macro RuntimeGeneratedFunction(code)
     quote
         RuntimeGeneratedFunction(@__MODULE__, @__MODULE__, $(esc(code)))
@@ -332,11 +336,11 @@ end
 
 function get_expression(rgf::RuntimeGeneratedFunction{argnames, cache_tag,
         context_tag, id, B}) where {
-    argnames,
-    cache_tag,
-    context_tag,
-    id,
-    B
+        argnames,
+        cache_tag,
+        context_tag,
+        id,
+        B
 }
     func_expr = Expr(:->, Expr(:tuple, argnames...), _lookup_body(cache_tag, id))
 end

@@ -102,7 +102,8 @@ GC.gc()
 @test f_gc(1, -1) == 100001
 
 # Test that drop_expr works
-f_drop1, f_drop2 = let
+f_drop1,
+f_drop2 = let
     ex = Base.remove_linenums!(:(x -> x - 1))
     # Construct two identical RGFs here to test the cache deduplication code
     (drop_expr(@RuntimeGeneratedFunction(ex)),
@@ -119,8 +120,9 @@ for k in 1:4
         t = Threads.@spawn begin
             r = Bool[]
             for i in 1:100
-                f = @RuntimeGeneratedFunction(Base.remove_linenums!(:((x, y) -> x + y +
-                                                                                $i * $k)))
+                f = @RuntimeGeneratedFunction(Base.remove_linenums!(:((
+                    x, y) -> x + y +
+                             $i * $k)))
                 x = 1
                 y = 2
                 push!(r, f(x, y) == x + y + i * k)
