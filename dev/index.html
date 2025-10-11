@@ -104,16 +104,17 @@ prob = ODEProblem(fol, [fol.x =&gt; 0.0], (0.0, 10.0), [fol.τ =&gt; 3.0])</code
           end
       end)</code></pre><h2 id="Reproducibility"><a class="docs-heading-anchor" href="#Reproducibility">Reproducibility</a><a id="Reproducibility-1"></a><a class="docs-heading-anchor-permalink" href="#Reproducibility" title="Permalink"></a></h2><details><summary>The documentation of this SciML package was built using these direct dependencies,</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Status `~/work/RuntimeGeneratedFunctions.jl/RuntimeGeneratedFunctions.jl/docs/Project.toml`
   [e30172f5] Documenter v1.14.1
-  [7e49a35a] RuntimeGeneratedFunctions v0.5.15 `~/work/RuntimeGeneratedFunctions.jl/RuntimeGeneratedFunctions.jl`</code></pre></details><details><summary>and using this machine and Julia version.</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Julia Version 1.11.7
-Commit f2b3dbda30a (2025-09-08 12:10 UTC)
+  [7e49a35a] RuntimeGeneratedFunctions v0.5.15 `~/work/RuntimeGeneratedFunctions.jl/RuntimeGeneratedFunctions.jl`</code></pre></details><details><summary>and using this machine and Julia version.</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Julia Version 1.12.0
+Commit b907bd0600f (2025-10-07 15:42 UTC)
 Build Info:
-  Official https://julialang.org/ release
+  Official https://julialang.org release
 Platform Info:
   OS: Linux (x86_64-linux-gnu)
   CPU: 4 × AMD EPYC 7763 64-Core Processor
   WORD_SIZE: 64
-  LLVM: libLLVM-16.0.6 (ORCJIT, znver3)
-Threads: 1 default, 0 interactive, 1 GC (on 4 virtual cores)</code></pre></details><details><summary>A more complete overview of all dependencies and their versions is also provided.</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Status `~/work/RuntimeGeneratedFunctions.jl/RuntimeGeneratedFunctions.jl/docs/Manifest.toml`
+  LLVM: libLLVM-18.1.7 (ORCJIT, znver3)
+  GC: Built with stock GC
+Threads: 1 default, 1 interactive, 1 GC (on 4 virtual cores)</code></pre></details><details><summary>A more complete overview of all dependencies and their versions is also provided.</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Status `~/work/RuntimeGeneratedFunctions.jl/RuntimeGeneratedFunctions.jl/docs/Manifest.toml`
   [a4c015fc] ANSIColoredPrinters v0.0.1
   [1520ce14] AbstractTrees v0.4.5
   [944b1d66] CodecZlib v0.7.8
@@ -123,22 +124,21 @@ Threads: 1 default, 0 interactive, 1 GC (on 4 virtual cores)</code></pre></detai
   [d7ba0133] Git v1.5.0
   [b5f81e59] IOCapture v0.2.5
   [692b3bcd] JLLWrappers v1.7.1
-  [682c06a0] JSON v1.0.1
+  [682c06a0] JSON v1.1.0
   [0e77f7df] LazilyInitializedFields v1.3.0
   [d0879d2d] MarkdownAST v0.1.2
   [69de0a69] Parsers v2.8.3
-⌅ [aea7be01] PrecompileTools v1.2.1
+  [aea7be01] PrecompileTools v1.3.3
   [21216c6a] Preferences v1.5.0
   [2792f1a3] RegistryInstances v0.1.0
   [7e49a35a] RuntimeGeneratedFunctions v0.5.15 `~/work/RuntimeGeneratedFunctions.jl/RuntimeGeneratedFunctions.jl`
-  [ec057cc2] StructUtils v2.5.0
+  [ec057cc2] StructUtils v2.5.1
   [3bb67fe8] TranscodingStreams v0.11.3
   [2e619515] Expat_jll v2.7.1+0
   [020c3dae] Git_LFS_jll v3.7.0+0
   [f8c6e375] Git_jll v2.51.1+0
   [94ce4f54] Libiconv_jll v1.18.0+0
-  [9bd350c2] OpenSSH_jll v10.0.2+0
-  [458c3c95] OpenSSL_jll v3.5.4+0
+  [9bd350c2] OpenSSH_jll v10.1.1+0
   [0dad84c5] ArgTools v1.1.2
   [56f22d72] Artifacts v1.11.0
   [2a0f44e3] Base64 v1.11.0
@@ -146,13 +146,14 @@ Threads: 1 default, 0 interactive, 1 GC (on 4 virtual cores)</code></pre></detai
   [f43a241f] Downloads v1.6.0
   [7b1f6079] FileWatching v1.11.0
   [b77e0a4c] InteractiveUtils v1.11.0
+  [ac6e5ff7] JuliaSyntaxHighlighting v1.12.0
   [b27032c2] LibCURL v0.6.4
   [76f85450] LibGit2 v1.11.0
   [8f399da3] Libdl v1.11.0
   [56ddb016] Logging v1.11.0
   [d6f4376e] Markdown v1.11.0
-  [ca575930] NetworkOptions v1.2.0
-  [44cfe95a] Pkg v1.11.0
+  [ca575930] NetworkOptions v1.3.0
+  [44cfe95a] Pkg v1.12.0
   [de0858da] Printf v1.11.0
   [3fa0cd96] REPL v1.11.0
   [9a3f8284] Random v1.11.0
@@ -165,13 +166,12 @@ Threads: 1 default, 0 interactive, 1 GC (on 4 virtual cores)</code></pre></detai
   [8dfed614] Test v1.11.0
   [cf7118a7] UUIDs v1.11.0
   [4ec0a83e] Unicode v1.11.0
-  [deac9b47] LibCURL_jll v8.6.0+0
-  [e37daf67] LibGit2_jll v1.7.2+0
-  [29816b5a] LibSSH2_jll v1.11.0+1
-  [c8ffd9c3] MbedTLS_jll v2.28.6+0
-  [14a3606d] MozillaCACerts_jll v2023.12.12
-  [efcefdf7] PCRE2_jll v10.42.0+1
-  [83775a58] Zlib_jll v1.2.13+1
-  [8e850ede] nghttp2_jll v1.59.0+0
-  [3f19e933] p7zip_jll v17.4.0+2
-Info Packages marked with ⌅ have new versions available but compatibility constraints restrict them from upgrading. To see why use `status --outdated -m`</code></pre></details><p>You can also download the <a href="https://github.com/SciML/RuntimeGeneratedFunctions.jl/tree/gh-pages/v0.5.15/assets/Manifest.toml">manifest</a> file and the <a href="https://github.com/SciML/RuntimeGeneratedFunctions.jl/tree/gh-pages/v0.5.15/assets/Project.toml">project</a> file.</p></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="api/">API »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.14.1 on <span class="colophon-date" title="Saturday 4 October 2025 14:54">Saturday 4 October 2025</span>. Using Julia version 1.11.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+  [deac9b47] LibCURL_jll v8.11.1+1
+  [e37daf67] LibGit2_jll v1.9.0+0
+  [29816b5a] LibSSH2_jll v1.11.3+1
+  [14a3606d] MozillaCACerts_jll v2025.5.20
+  [458c3c95] OpenSSL_jll v3.5.1+0
+  [efcefdf7] PCRE2_jll v10.44.0+1
+  [83775a58] Zlib_jll v1.3.1+2
+  [8e850ede] nghttp2_jll v1.64.0+1
+  [3f19e933] p7zip_jll v17.5.0+2</code></pre></details><p>You can also download the <a href="https://github.com/SciML/RuntimeGeneratedFunctions.jl/tree/gh-pages/v0.5.15/assets/Manifest.toml">manifest</a> file and the <a href="https://github.com/SciML/RuntimeGeneratedFunctions.jl/tree/gh-pages/v0.5.15/assets/Project.toml">project</a> file.</p></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="api/">API »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.14.1 on <span class="colophon-date" title="Saturday 11 October 2025 14:54">Saturday 11 October 2025</span>. Using Julia version 1.12.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
