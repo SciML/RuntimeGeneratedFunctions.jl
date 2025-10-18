@@ -1,6 +1,6 @@
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.12.0"
+julia_version = "1.12.1"
 manifest_format = "2.0"
 project_hash = "877841ef2ea2c67b6ff5a0ca9241caa979012d1b"
 
@@ -105,9 +105,9 @@ version = "1.7.1"
 
 [[deps.JSON]]
 deps = ["Dates", "Logging", "Parsers", "PrecompileTools", "StructUtils", "UUIDs", "Unicode"]
-git-tree-sha1 = "2b29defa1d506ab60df17818581bba7a04499f9b"
+git-tree-sha1 = "06ea418d0c95878c8f3031023951edcf25b9e0ef"
 uuid = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
-version = "1.1.0"
+version = "1.2.0"
 
     [deps.JSON.extensions]
     JSONArrowExt = ["ArrowTypes"]
@@ -185,9 +185,9 @@ version = "1.3.0"
 
 [[deps.OpenSSH_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "OpenSSL_jll", "Zlib_jll"]
-git-tree-sha1 = "091c79dc9387f558ab8785a2467dbad02d30ef3b"
+git-tree-sha1 = "301412a644646fdc0ad67d0a87487466b491e53d"
 uuid = "9bd350c2-7e96-507f-8002-3f2e150b4e1b"
-version = "10.1.1+0"
+version = "10.2.1+0"
 
 [[deps.OpenSSL_jll]]
 deps = ["Artifacts", "Libdl"]
