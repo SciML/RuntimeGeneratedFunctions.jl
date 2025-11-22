@@ -2,6 +2,9 @@
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 RuntimeGeneratedFunctions = "7e49a35a-f44a-4d26-94aa-eba1b4ca6b47"
 
+[sources]
+RuntimeGeneratedFunctions = {path = "/home/runner/work/RuntimeGeneratedFunctions.jl/RuntimeGeneratedFunctions.jl"}
+
 [compat]
 Documenter = "1"
 RuntimeGeneratedFunctions = "0.5"
