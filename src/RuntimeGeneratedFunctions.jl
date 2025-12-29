@@ -81,6 +81,24 @@ struct RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id, B} <: Func
     end
 end
 
+"""
+    drop_expr(rgf::RuntimeGeneratedFunction)
+
+Return a new `RuntimeGeneratedFunction` that does not hold a reference to the
+function body expression. This allows the expression AST to be garbage collected
+while keeping the function callable.
+
+The expression can still be retrieved later using [`get_expression`](@ref) as long
+as at least one `RuntimeGeneratedFunction` with the same body exists.
+
+# Examples
+```julia
+ex = :((x) -> x^2)
+rgf = @RuntimeGeneratedFunction(ex)
+rgf_dropped = drop_expr(rgf)
+rgf_dropped(2)  # Still works, returns 4
+```
+"""
 function drop_expr(::RuntimeGeneratedFunction{
         a,
         cache_tag,
@@ -334,6 +352,23 @@ function closures_to_opaque(ex::Expr, return_type = nothing)
     return Expr(head, Any[closures_to_opaque(x, return_type) for x in args]...)
 end
 
+"""
+    get_expression(rgf::RuntimeGeneratedFunction)
+
+Retrieve the function expression from a `RuntimeGeneratedFunction`.
+
+This works even if [`drop_expr`](@ref) has been called on the function, as long as
+the expression is still in the cache (i.e., at least one `RuntimeGeneratedFunction`
+with the same body exists).
+
+# Examples
+```julia
+ex = :((x) -> x^2)
+rgf = @RuntimeGeneratedFunction(ex)
+RuntimeGeneratedFunctions.get_expression(rgf)
+# Returns: :((x,) -> x ^ 2)
+```
+"""
 function get_expression(rgf::RuntimeGeneratedFunction{argnames, cache_tag,
         context_tag, id, B}) where {
         argnames,
