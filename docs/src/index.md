@@ -45,7 +45,7 @@ no_worldage()
 
 If you want to use helper functions or global variables from a different
 module within your function expression, you'll need to pass a `context_module`
-to the `@RuntimeGeneratedFunction` constructor. For example
+to the `@RuntimeGeneratedFunction` constructor. For example:
 
 ```julia
 RuntimeGeneratedFunctions.init(@__MODULE__)
@@ -71,9 +71,9 @@ expression in a global variable within some module. This is normally
 transparent to the user, but if the `RuntimeGeneratedFunction` is evaluated
 during module precompilation, the cache module must be explicitly set to the
 module currently being precompiled. This is relevant for helper functions in
-some module, which construct a RuntimeGeneratedFunction on behalf of the user.
+some module which constructs a RuntimeGeneratedFunction on behalf of the user.
 For example, in the following code, any third party user of
-`HelperModule.construct_rgf()` user needs to pass their own module as the
+`HelperModule.construct_rgf()` needs to pass their own module as the
 `cache_module` if they want the returned function to work after precompilation:
 
 ```julia

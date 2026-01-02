@@ -65,7 +65,7 @@ struct RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id, B} <: Func
         new{Tuple(args), cache_tag, context_tag, id, typeof(cached_body)}(cached_body)
     end
 
-    # For internal use in deserialize() - doesen't check whether the body is in the cache!
+    # For internal use in deserialize() - doesn't check whether the body is in the cache!
     function RuntimeGeneratedFunction{
             argnames,
             cache_tag,
