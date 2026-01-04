@@ -8,6 +8,6 @@ y_in_RGFPrecompTest2 = 2
 # different module.
 function generate_rgf(cache_module)
     context_module = @__MODULE__
-    RuntimeGeneratedFunction(cache_module, @__MODULE__, :((x) -> y_in_RGFPrecompTest2 + x))
+    return RuntimeGeneratedFunction(cache_module, @__MODULE__, :((x) -> y_in_RGFPrecompTest2 + x))
 end
 end
