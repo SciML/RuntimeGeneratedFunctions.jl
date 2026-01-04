@@ -9,26 +9,32 @@ RuntimeGeneratedFunctions.init(@__MODULE__)
 function f(_du, _u, _p, _t)
     @inbounds _du[1] = _u[1]
     @inbounds _du[2] = _u[2]
-    nothing
+    return nothing
 end
 
-ex1 = :((_du, _u, _p, _t) -> begin
-    @inbounds _du[1] = _u[1]
-    @inbounds _du[2] = _u[2]
-    nothing
-end)
+ex1 = :(
+    (_du, _u, _p, _t) -> begin
+        @inbounds _du[1] = _u[1]
+        @inbounds _du[2] = _u[2]
+        nothing
+    end
+)
 
-ex2 = :(function f(_du, _u, _p, _t)
-    @inbounds _du[1] = _u[1]
-    @inbounds _du[2] = _u[2]
-    nothing
-end)
+ex2 = :(
+    function f(_du, _u, _p, _t)
+        @inbounds _du[1] = _u[1]
+        @inbounds _du[2] = _u[2]
+        return nothing
+    end
+)
 
-ex3 = :(function (_du::T, _u::Vector{E}, _p::P, _t::Any) where {T <: Vector, E, P}
-    @inbounds _du[1] = _u[1]
-    @inbounds _du[2] = _u[2]
-    nothing
-end)
+ex3 = :(
+    function (_du::T, _u::Vector{E}, _p::P, _t::Any) where {T <: Vector, E, P}
+        @inbounds _du[1] = _u[1]
+        @inbounds _du[2] = _u[2]
+        return nothing
+    end
+)
 
 f0 = @RuntimeGeneratedFunction(:(() -> 42))
 f1 = @RuntimeGeneratedFunction(ex1)
@@ -58,32 +64,36 @@ t2 = @belapsed $f1($du, $u, $p, $t)
 t3 = @belapsed $f2($du, $u, $p, $t)
 t4 = @belapsed $f3($du, $u, $p, $t)
 
-@test t1≈t2 atol=3e-8
-@test t1≈t3 atol=3e-8
-@test t1≈t4 atol=3e-8
+@test t1 ≈ t2 atol = 3.0e-8
+@test t1 ≈ t3 atol = 3.0e-8
+@test t1 ≈ t4 atol = 3.0e-8
 
 function no_worldage()
-    ex = :(function f(_du, _u, _p, _t)
-        @inbounds _du[1] = _u[1]
-        @inbounds _du[2] = _u[2]
-        nothing
-    end)
+    ex = :(
+        function f(_du, _u, _p, _t)
+            @inbounds _du[1] = _u[1]
+            @inbounds _du[2] = _u[2]
+            return nothing
+        end
+    )
     f1 = @RuntimeGeneratedFunction(ex)
     du = rand(2)
     u = rand(2)
     p = nothing
     t = nothing
-    f1(du, u, p, t)
+    return f1(du, u, p, t)
 end
 @test no_worldage() === nothing
 
 # Test show()
-@test sprint(show, MIME"text/plain"(),
-    @RuntimeGeneratedFunction(Base.remove_linenums!(:((x, y) -> x + y + 1)))) ==
-      """
-      RuntimeGeneratedFunction(#=in $(@__MODULE__)=#, #=using $(@__MODULE__)=#, :((x, y)->begin
-                x + y + 1
-            end))"""
+@test sprint(
+    show, MIME"text/plain"(),
+    @RuntimeGeneratedFunction(Base.remove_linenums!(:((x, y) -> x + y + 1)))
+) ==
+    """
+    RuntimeGeneratedFunction(#=in $(@__MODULE__)=#, #=using $(@__MODULE__)=#, :((x, y)->begin
+              x + y + 1
+          end))"""
 
 # Test with precompilation
 push!(LOAD_PATH, joinpath(@__DIR__, "precomp"))
@@ -103,11 +113,13 @@ GC.gc()
 
 # Test that drop_expr works
 f_drop1,
-f_drop2 = let
+    f_drop2 = let
     ex = Base.remove_linenums!(:(x -> x - 1))
     # Construct two identical RGFs here to test the cache deduplication code
-    (drop_expr(@RuntimeGeneratedFunction(ex)),
-        drop_expr(@RuntimeGeneratedFunction(ex)))
+    (
+        drop_expr(@RuntimeGeneratedFunction(ex)),
+        drop_expr(@RuntimeGeneratedFunction(ex)),
+    )
 end
 GC.gc()
 @test f_drop1(1) == 0
@@ -120,9 +132,16 @@ for k in 1:4
         t = Threads.@spawn begin
             r = Bool[]
             for i in 1:100
-                f = @RuntimeGeneratedFunction(Base.remove_linenums!(:((
-                    x, y) -> x + y +
-                             $i * $k)))
+                f = @RuntimeGeneratedFunction(
+                    Base.remove_linenums!(
+                        :(
+                            (
+                                x, y,
+                            ) -> x + y +
+                                $i * $k
+                        )
+                    )
+                )
                 x = 1
                 y = 2
                 push!(r, f(x, y) == x + y + i * k)
@@ -137,11 +156,11 @@ end
 # Test that globals are resolved within the correct scope
 
 module GlobalsTest
-using RuntimeGeneratedFunctions
-RuntimeGeneratedFunctions.init(@__MODULE__)
+    using RuntimeGeneratedFunctions
+    RuntimeGeneratedFunctions.init(@__MODULE__)
 
-y_in_GlobalsTest = 40
-f = @RuntimeGeneratedFunction(:(x -> x + y_in_GlobalsTest))
+    y_in_GlobalsTest = 40
+    f = @RuntimeGeneratedFunction(:(x -> x + y_in_GlobalsTest))
 end
 
 @test GlobalsTest.f(2) == 42
@@ -149,11 +168,13 @@ end
 f_outside = @RuntimeGeneratedFunction(GlobalsTest, :(x -> x + y_in_GlobalsTest))
 @test f_outside(2) == 42
 
-@test_throws ErrorException @eval(module NotInitTest
-using RuntimeGeneratedFunctions
-# RuntimeGeneratedFunctions.init(@__MODULE__) # <-- missing
-f = @RuntimeGeneratedFunction(:(x -> x + y))
-end)
+@test_throws ErrorException @eval(
+    module NotInitTest
+    using RuntimeGeneratedFunctions
+    # RuntimeGeneratedFunctions.init(@__MODULE__) # <-- missing
+    f = @RuntimeGeneratedFunction(:(x -> x + y))
+    end
+)
 
 ex = :(x -> (y -> x + y))
 @test @RuntimeGeneratedFunction(ex)(2)(3) === 5
@@ -161,14 +182,18 @@ ex = :(x -> (y -> x + y))
 ex = :(x -> (f(y::Int)::Float64 = x + y; f))
 @test @RuntimeGeneratedFunction(ex)(2)(3) === 5.0
 
-ex = :(x -> function (y::Int)
-    return x + y
-end)
+ex = :(
+    x -> function (y::Int)
+        return x + y
+    end
+)
 @test @RuntimeGeneratedFunction(ex)(2)(3) === 5
 
-ex = :(x -> function f(y::Int)::UInt8
-    return x + y
-end)
+ex = :(
+    x -> function f(y::Int)::UInt8
+        return x + y
+    end
+)
 @test @RuntimeGeneratedFunction(ex)(2)(3) === 0x05
 
 ex = :(x -> sum(i^2 for i in 1:x))
@@ -188,6 +213,6 @@ deserialized_f, deserialized_g = deserialize(buf)
 @test deserialized_g.body isa Nothing
 
 # deepcopy
-ff = @RuntimeGeneratedFunction(:(x -> [x, x+1]))
+ff = @RuntimeGeneratedFunction(:(x -> [x, x + 1]))
 @test deepcopy(ff) == ff
 @test deepcopy(ff) === ff
