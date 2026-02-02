@@ -113,7 +113,7 @@ function drop_expr(
     # When dropping the reference to the body from an RGF, we need to upgrade
     # from a weak to a strong reference in the cache to prevent the body being
     # GC'd.
-    lock(_cache_lock) do
+    @lock _cache_lock begin
         cache = getfield(parentmodule(cache_tag), _cachename)
         body = cache[id]
         if body isa WeakRef
