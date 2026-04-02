@@ -325,7 +325,7 @@ end
 
 function expr_to_id(ex)
     io = IOBuffer()
-    Serialization.serialize(io, ex)
+    Meta.show_sexpr(io, Base.remove_linenums!(deepcopy(ex)))
     return Tuple(reinterpret(UInt32, sha1(take!(io))))
 end
 
