@@ -359,14 +359,13 @@ function closures_to_opaque(ex::Expr, return_type = nothing)
         end
         return _ex
     elseif head === :generator
-        f_args = Expr(:tuple, Any[x.args[1] for x in args[2:end]]...)
+        f_args = Expr(:tuple)
+        f_args.args = Any[x.args[1] for x in args[2:end]]
         iters = Any[x.args[2] for x in args[2:end]]
-        return Expr(
-            :call,
-            GlobalRef(Base, :Generator),
-            closures_to_opaque(Expr(:(->), f_args, args[1])),
-            iters...
-        )
+        new_ex = Expr(:call, GlobalRef(Base, :Generator),
+            closures_to_opaque(Expr(:(->), f_args, args[1])))
+        append!(new_ex.args, iters)
+        return new_ex
     elseif head === :opaque_closure
         return closures_to_opaque(args[1])
     elseif head === :return && return_type !== nothing
@@ -375,7 +374,9 @@ function closures_to_opaque(ex::Expr, return_type = nothing)
             _tconvert(return_type, closures_to_opaque(args[1], return_type))
         )
     end
-    return Expr(head, Any[closures_to_opaque(x, return_type) for x in args]...)
+    new_ex = Expr(head)
+    new_ex.args = Any[closures_to_opaque(x, return_type) for x in args]
+    return new_ex
 end
 
 """
