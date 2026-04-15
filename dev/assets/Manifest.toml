@@ -272,9 +272,9 @@ version = "1.11.0"
 
 [[deps.StructUtils]]
 deps = ["Dates", "UUIDs"]
-git-tree-sha1 = "fa95b3b097bcef5845c142ea2e085f1b2591e92c"
+git-tree-sha1 = "aab80fbf866600f3299dd7f6656d80e7be177cfe"
 uuid = "ec057cc2-7a8d-4b58-b3b3-92acb9f63b42"
-version = "2.7.1"
+version = "2.7.2"
 
     [deps.StructUtils.extensions]
     StructUtilsMeasurementsExt = ["Measurements"]
