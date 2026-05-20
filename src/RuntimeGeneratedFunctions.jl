@@ -324,10 +324,26 @@ function normalize_args(arg::Expr)
 end
 
 function expr_to_id(ex)
-    io = IOBuffer()
-    Meta.show_sexpr(io, Base.remove_linenums!(deepcopy(ex)))
-    return Tuple(reinterpret(UInt32, sha1(take!(io))))
+    ctx = SHA1_CTX()
+    _hash_expr!(ctx, ex)
+    return Tuple(reinterpret(UInt32, SHA.digest!(ctx)))
 end
+
+_hash_expr!(ctx, ::LineNumberNode) = nothing
+const _OPEN = UInt8['(']
+const _SEP = UInt8[',']
+const _CLOSE = UInt8[')']
+
+function _hash_expr!(ctx, ex::Expr)
+    update!(ctx, _OPEN)
+    update!(ctx, Vector{UInt8}(string(ex.head)))
+    for arg in ex.args
+        update!(ctx, _SEP)
+        _hash_expr!(ctx, arg)
+    end
+    return update!(ctx, _CLOSE)
+end
+_hash_expr!(ctx, ex) = update!(ctx, Vector{UInt8}(string(ex)))
 
 @nospecialize
 
@@ -362,8 +378,10 @@ function closures_to_opaque(ex::Expr, return_type = nothing)
         f_args = Expr(:tuple)
         f_args.args = Any[x.args[1] for x in args[2:end]]
         iters = Any[x.args[2] for x in args[2:end]]
-        new_ex = Expr(:call, GlobalRef(Base, :Generator),
-            closures_to_opaque(Expr(:(->), f_args, args[1])))
+        new_ex = Expr(
+            :call, GlobalRef(Base, :Generator),
+            closures_to_opaque(Expr(:(->), f_args, args[1]))
+        )
         append!(new_ex.args, iters)
         return new_ex
     elseif head === :opaque_closure
