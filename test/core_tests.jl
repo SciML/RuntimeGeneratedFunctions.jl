@@ -133,6 +133,23 @@ GC.gc()
 @test f_drop1(1) == 0
 @test f_drop2(1) == 0
 
+let
+    script = joinpath(@__DIR__, "shared", "drop_expr_specializations.jl")
+    trace_file, trace_io = mktemp()
+    close(trace_io)
+    try
+        run(`$julia --startup-file=no --project=$proj --trace-compile=$trace_file $script`)
+        specializations = count(eachline(trace_file)) do line
+            startswith(
+                line, "precompile(Tuple{typeof(RuntimeGeneratedFunctions.drop_expr),"
+            )
+        end
+        @test specializations == 0
+    finally
+        rm(trace_file; force = true)
+    end
+end
+
 # Test that threaded use works. Cache reads happen while the caller holds
 # Julia's compiler lock, so a cache that blocks there deadlocks instead of
 # failing; the subprocess needs a watchdog and more than one thread.
