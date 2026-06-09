@@ -1,8 +1,19 @@
-using RuntimeGeneratedFunctions, BenchmarkTools
-using Serialization
 using Test
 
-include("qa.jl")
+const GROUP = get(ENV, "GROUP", "All")
+
+if GROUP == "QA"
+    using Pkg
+    Pkg.activate(joinpath(@__DIR__, "qa"))
+    Pkg.develop(PackageSpec(path = joinpath(@__DIR__, "..")))
+    Pkg.instantiate()
+    include(joinpath(@__DIR__, "qa", "qa.jl"))
+end
+
+if GROUP == "All" || GROUP == "Core"
+
+using RuntimeGeneratedFunctions, BenchmarkTools
+using Serialization
 
 RuntimeGeneratedFunctions.init(@__MODULE__)
 
@@ -216,3 +227,5 @@ deserialized_f, deserialized_g = deserialize(buf)
 ff = @RuntimeGeneratedFunction(:(x -> [x, x + 1]))
 @test deepcopy(ff) == ff
 @test deepcopy(ff) === ff
+
+end # GROUP == "All" || GROUP == "Core"
