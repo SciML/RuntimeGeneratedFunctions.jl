@@ -1,4 +1,6 @@
 using Test
+using RuntimeGeneratedFunctions, BenchmarkTools
+using Serialization
 
 const GROUP = get(ENV, "GROUP", "All")
 
@@ -11,9 +13,6 @@ if GROUP == "QA"
 end
 
 if GROUP == "All" || GROUP == "Core"
-
-using RuntimeGeneratedFunctions, BenchmarkTools
-using Serialization
 
 RuntimeGeneratedFunctions.init(@__MODULE__)
 
