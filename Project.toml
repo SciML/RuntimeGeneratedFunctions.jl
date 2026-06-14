@@ -12,8 +12,9 @@ Serialization = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
 Aqua = "0.8"
 BenchmarkTools = "1"
 ExprTools = "0.1"
-Pkg = "1"
 SHA = "0.7, 1"
+SafeTestsets = "0.1, 1"
+SciMLTesting = "1"
 Serialization = "1.10"
 Test = "1"
 julia = "1.10"
@@ -21,8 +22,9 @@ julia = "1.10"
 [extras]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
-Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
+SafeTestsets = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
+SciMLTesting = "09d9d899-5365-40a9-917a-5f67fddea283"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Aqua", "BenchmarkTools", "Pkg", "Test"]
+test = ["Aqua", "BenchmarkTools", "SafeTestsets", "SciMLTesting", "Test"]

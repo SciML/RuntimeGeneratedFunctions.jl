@@ -1,17 +1,12 @@
-using Test
-using RuntimeGeneratedFunctions, BenchmarkTools
-using Serialization
+using SciMLTesting
 
-const GROUP = get(ENV, "GROUP", "All")
-
-if GROUP == "QA"
-    using Pkg
-    Pkg.activate(joinpath(@__DIR__, "qa"))
-    Pkg.develop(PackageSpec(path = joinpath(@__DIR__, "..")))
-    Pkg.instantiate()
-    include(joinpath(@__DIR__, "qa", "qa.jl"))
-end
-
-if GROUP == "All" || GROUP == "Core"
-    include(joinpath(@__DIR__, "core_tests.jl"))
-end
+# core_tests.jl must run in `Main` (not an isolated @safetestset module): it
+# deserializes RuntimeGeneratedFunctions produced by a separate process whose
+# module tag is `Main.#_RGF_ModTag`, so the body must be evaluated where
+# `RuntimeGeneratedFunctions.init(@__MODULE__)` initializes `Main`. A thunk runs
+# in the caller's (Main) scope; folder-discovery's @safetestset isolation cannot
+# express this, so Core is an explicit thunk while QA uses the standard sub-env.
+run_tests(;
+    core = () -> include(joinpath(@__DIR__, "core_tests.jl")),
+    qa = (; env = joinpath(@__DIR__, "qa"), body = joinpath(@__DIR__, "qa", "qa.jl")),
+)
