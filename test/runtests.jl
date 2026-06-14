@@ -1,6 +1,12 @@
 using Test
-using RuntimeGeneratedFunctions, BenchmarkTools
-using Serialization
+using SafeTestsets
+using RuntimeGeneratedFunctions
+
+# Serialization resolves an RGF's cache/module tag type by name against the
+# receiving process's `Main`. The serialize round-trip test deserializes an RGF
+# produced by serialize_rgf.jl, which ran `init` in its own `Main`, so `Main`
+# here must also be initialized for that tag to be defined.
+RuntimeGeneratedFunctions.init(@__MODULE__)
 
 const GROUP = get(ENV, "GROUP", "All")
 
@@ -13,5 +19,7 @@ if GROUP == "QA"
 end
 
 if GROUP == "All" || GROUP == "Core"
-    include(joinpath(@__DIR__, "core_tests.jl"))
+    @safetestset "Core" begin
+        include("core_tests.jl")
+    end
 end

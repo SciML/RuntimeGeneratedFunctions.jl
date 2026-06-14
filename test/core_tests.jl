@@ -1,3 +1,7 @@
+using RuntimeGeneratedFunctions, BenchmarkTools
+using Serialization
+using Test
+
 RuntimeGeneratedFunctions.init(@__MODULE__)
 
 function f(_du, _u, _p, _t)

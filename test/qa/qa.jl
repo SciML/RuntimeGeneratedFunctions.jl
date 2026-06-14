@@ -1,5 +1,7 @@
-using RuntimeGeneratedFunctions, Aqua
-@testset "Aqua" begin
+using SafeTestsets
+
+@safetestset "Aqua" begin
+    using RuntimeGeneratedFunctions, Aqua
     Aqua.find_persistent_tasks_deps(RuntimeGeneratedFunctions)
     Aqua.test_ambiguities(RuntimeGeneratedFunctions, recursive = false)
     Aqua.test_deps_compat(RuntimeGeneratedFunctions)
