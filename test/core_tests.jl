@@ -1,3 +1,7 @@
+using Test
+using RuntimeGeneratedFunctions, BenchmarkTools
+using Serialization
+
 RuntimeGeneratedFunctions.init(@__MODULE__)
 
 function f(_du, _u, _p, _t)
@@ -199,7 +203,8 @@ ex = :(x -> [2i for i in 1:x])
 # Serialization
 
 proj = dirname(Base.active_project())
-buf = IOBuffer(read(`$(Base.julia_cmd()) --startup-file=no --project=$proj "serialize_rgf.jl"`))
+serialize_script = joinpath(@__DIR__, "shared", "serialize_rgf.jl")
+buf = IOBuffer(read(`$(Base.julia_cmd()) --startup-file=no --project=$proj $serialize_script`))
 deserialized_f, deserialized_g = deserialize(buf)
 @test deserialized_f(11) == "Hi from a separate process. x=11"
 @test deserialized_f.body isa Expr
