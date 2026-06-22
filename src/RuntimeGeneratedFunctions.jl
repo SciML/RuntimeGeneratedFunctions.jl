@@ -81,6 +81,11 @@ struct RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id, B} <: Func
     end
 end
 
+_argnames(::RuntimeGeneratedFunction{a}) where {a} = a
+_cache_tag(::RuntimeGeneratedFunction{a, ct}) where {a, ct} = ct
+_context_tag(::RuntimeGeneratedFunction{a, ct, cx}) where {a, ct, cx} = cx
+_id(::RuntimeGeneratedFunction{a, ct, cx, id}) where {a, ct, cx, id} = id
+
 """
     drop_expr(rgf::RuntimeGeneratedFunction)
 
@@ -99,28 +104,19 @@ rgf_dropped = drop_expr(rgf)
 rgf_dropped(2)  # Still works, returns 4
 ```
 """
-function drop_expr(
-        ::RuntimeGeneratedFunction{
-            a,
-            cache_tag,
-            c,
-            id,
-        }
-    ) where {
-        a, cache_tag, c,
-        id,
-    }
+function drop_expr(@nospecialize(rgf::RuntimeGeneratedFunction))
     # When dropping the reference to the body from an RGF, we need to upgrade
     # from a weak to a strong reference in the cache to prevent the body being
     # GC'd.
+    a, ct, cx, id = _argnames(rgf), _cache_tag(rgf), _context_tag(rgf), _id(rgf)
     @lock _cache_lock begin
-        cache = getfield(parentmodule(cache_tag), _cachename)
+        cache = getfield(parentmodule(ct), _cachename)
         body = cache[id]
         if body isa WeakRef
             cache[id] = body.value
         end
     end
-    return RuntimeGeneratedFunction{a, cache_tag, c, id}(nothing)
+    return RuntimeGeneratedFunction{a, ct, cx, id}(nothing)
 end
 
 function _check_rgf_initialized(mods...)
