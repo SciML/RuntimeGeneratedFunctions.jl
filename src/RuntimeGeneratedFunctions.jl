@@ -1,9 +1,19 @@
 module RuntimeGeneratedFunctions
 
-using ExprTools, Serialization, SHA
-import Base.Experimental: @opaque
+using ExprTools: ExprTools, combinedef, splitdef
+using SHA: SHA, SHA1_CTX, update!
+using Serialization: Serialization, AbstractSerializer, deserialize, serialize
 
 export RuntimeGeneratedFunction, @RuntimeGeneratedFunction, drop_expr
+
+# `init` and `get_expression` are documented, downstream-relied-on entry points
+# (see README and the `@autodocs` API page) that are intentionally not exported
+# to keep them namespaced under `RuntimeGeneratedFunctions.`. Declare them public
+# so downstream packages can qualify-access them and pass ExplicitImports'
+# `check_all_qualified_accesses_are_public`.
+@static if VERSION >= v"1.11"
+    eval(Expr(:public, :init, :get_expression))
+end
 
 const _rgf_docs = """
     @RuntimeGeneratedFunction(function_expression)
