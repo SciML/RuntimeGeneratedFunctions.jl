@@ -1,4 +1,4 @@
-using RuntimeGeneratedFunctions, Aqua, ExplicitImports, SciMLTesting
+using RuntimeGeneratedFunctions, SciMLTesting, Test
 
 # `Base.deepcopy_internal` and `Serialization.serialize_type` are the
 # documented-by-convention extension points used to customize `deepcopy` and
@@ -7,8 +7,6 @@ using RuntimeGeneratedFunctions, Aqua, ExplicitImports, SciMLTesting
 # so they are ignored rather than rewritten.
 run_qa(
     RuntimeGeneratedFunctions;
-    Aqua = Aqua,
-    ExplicitImports = ExplicitImports,
     explicit_imports = true,
     ei_kwargs = (;
         all_qualified_accesses_are_public = (; ignore = (:deepcopy_internal, :serialize_type)),
