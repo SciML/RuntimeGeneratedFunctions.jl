@@ -1,11 +1,14 @@
-using RuntimeGeneratedFunctions, Aqua
-@testset "Aqua" begin
-    Aqua.find_persistent_tasks_deps(RuntimeGeneratedFunctions)
-    Aqua.test_ambiguities(RuntimeGeneratedFunctions, recursive = false)
-    Aqua.test_deps_compat(RuntimeGeneratedFunctions)
-    Aqua.test_piracies(RuntimeGeneratedFunctions)
-    Aqua.test_project_extras(RuntimeGeneratedFunctions)
-    Aqua.test_stale_deps(RuntimeGeneratedFunctions)
-    Aqua.test_unbound_args(RuntimeGeneratedFunctions)
-    Aqua.test_undefined_exports(RuntimeGeneratedFunctions)
-end
+using RuntimeGeneratedFunctions, SciMLTesting, Test
+
+# `Base.deepcopy_internal` and `Serialization.serialize_type` are the
+# documented-by-convention extension points used to customize `deepcopy` and
+# `Serialization.serialize`, respectively. Neither owner declares them public, but
+# overriding/calling them is the only supported way to get the required behavior,
+# so they are ignored rather than rewritten.
+run_qa(
+    RuntimeGeneratedFunctions;
+    explicit_imports = true,
+    ei_kwargs = (;
+        all_qualified_accesses_are_public = (; ignore = (:deepcopy_internal, :serialize_type)),
+    ),
+)
