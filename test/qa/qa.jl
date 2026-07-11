@@ -8,6 +8,7 @@ using RuntimeGeneratedFunctions, SciMLTesting, Test
 run_qa(
     RuntimeGeneratedFunctions;
     explicit_imports = true,
+    api_docs_kwargs = (; rendered = true),
     ei_kwargs = (;
         all_qualified_accesses_are_public = (; ignore = (:deepcopy_internal, :serialize_type)),
     ),
