@@ -8,7 +8,10 @@ makedocs(
     sitename = "RuntimeGeneratedFunctions.jl",
     authors = "Chris Rackauckas",
     modules = [RuntimeGeneratedFunctions],
-    clean = true, doctest = false, linkcheck = true,
+    clean = true,
+    doctest = true,
+    linkcheck = true,
+    checkdocs = :exports,
     format = Documenter.HTML(
         assets = ["assets/favicon.ico"],
         canonical = "https://docs.sciml.ai/RuntimeGeneratedFunctions/stable/"
