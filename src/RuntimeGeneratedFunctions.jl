@@ -527,9 +527,11 @@ function Serialization.deserialize(
         B,
     }
     body = deserialize(s)
-    B === Nothing && throw(ArgumentError(
-        "cannot deserialize a dropped RuntimeGeneratedFunction; serialize it before calling drop_expr"
-    ))
+    B === Nothing && throw(
+        ArgumentError(
+            "cannot deserialize a dropped RuntimeGeneratedFunction; serialize it before calling drop_expr"
+        )
+    )
     cached_body = _cache_body(cache_tag, id, body)
     f = RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id}(cached_body)
     return f
