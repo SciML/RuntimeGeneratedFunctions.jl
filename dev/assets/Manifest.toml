@@ -2,7 +2,7 @@
 
 julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "877841ef2ea2c67b6ff5a0ca9241caa979012d1b"
+project_hash = "edfffc01d529b3649e6d64b762d258cfd21060db"
 
 [[deps.ANSIColoredPrinters]]
 git-tree-sha1 = "574baf8110975760d391c710b6341da1afa48d8c"
@@ -256,7 +256,7 @@ version = "0.1.0"
 deps = ["ExprTools", "SHA", "Serialization"]
 path = "/home/runner/work/RuntimeGeneratedFunctions.jl/RuntimeGeneratedFunctions.jl"
 uuid = "7e49a35a-f44a-4d26-94aa-eba1b4ca6b47"
-version = "0.5.22"
+version = "0.6.0"
 
 [[deps.SHA]]
 uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
