@@ -43,6 +43,12 @@ f3 = @RuntimeGeneratedFunction(ex3)
 
 @test f1 isa Function
 
+function evaluate_through_function_interface(f::Function, value)
+    return f(value)
+end
+
+@test evaluate_through_function_interface(@RuntimeGeneratedFunction(:(x -> x + 1)), 41) == 42
+
 du = rand(2)
 u = rand(2)
 p = nothing
@@ -204,12 +210,16 @@ ex = :(x -> [2i for i in 1:x])
 
 proj = dirname(Base.active_project())
 serialize_script = joinpath(@__DIR__, "shared", "serialize_rgf.jl")
-buf = IOBuffer(read(`$(Base.julia_cmd()) --startup-file=no --project=$proj $serialize_script`))
-deserialized_f, deserialized_g = deserialize(buf)
+julia = joinpath(Sys.BINDIR, "julia")
+buf = IOBuffer(read(`$julia --startup-file=no --project=$proj $serialize_script`))
+deserialized_f = deserialize(buf)
 @test deserialized_f(11) == "Hi from a separate process. x=11"
 @test deserialized_f.body isa Expr
-@test deserialized_g(12) == "Serialization with dropped body. y=12"
-@test deserialized_g.body isa Nothing
+
+serialization_buffer = IOBuffer()
+serialize(serialization_buffer, drop_expr(@RuntimeGeneratedFunction(:(x -> x + 1))))
+seekstart(serialization_buffer)
+@test_throws ArgumentError deserialize(serialization_buffer)
 
 # deepcopy
 ff = @RuntimeGeneratedFunction(:(x -> [x, x + 1]))

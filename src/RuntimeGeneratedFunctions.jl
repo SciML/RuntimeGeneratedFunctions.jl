@@ -2,7 +2,7 @@ module RuntimeGeneratedFunctions
 
 using ExprTools: ExprTools, combinedef, splitdef
 using SHA: SHA, SHA1_CTX, update!
-using Serialization: Serialization, AbstractSerializer, deserialize, serialize
+using Serialization: Serialization, AbstractSerializer, deserialize
 
 export RuntimeGeneratedFunction, @RuntimeGeneratedFunction, drop_expr
 
@@ -15,51 +15,52 @@ export RuntimeGeneratedFunction, @RuntimeGeneratedFunction, drop_expr
     eval(Expr(:public, :init, :get_expression))
 end
 
-const _rgf_docs = """
-    @RuntimeGeneratedFunction(function_expression)
-    @RuntimeGeneratedFunction(context_module, function_expression, opaque_closures=true)
+"""
+    RuntimeGeneratedFunction(cache_module, context_module, function_expression;
+        opaque_closures = true)
 
-    RuntimeGeneratedFunction(cache_module, context_module, function_expression; opaque_closures=true)
+A callable function compiled from `function_expression` without a world-age
+barrier. A `RuntimeGeneratedFunction` is a `Function`, so generic code that
+accepts and invokes a `Function` can use it. It is not a named generic function:
+it represents one callable method and does not participate in method dispatch.
 
-Construct a function from `function_expression` which can be called immediately
-without world age problems. Somewhat like using `eval(function_expression)` and
-then calling the resulting function. The differences are:
+# Arguments
 
-* The result can be called immediately (immune to world age errors)
-* The result is not a named generic function, and doesn't participate in
-  generic function dispatch; it's more like a callable method.
+- `cache_module::Module`: module that owns the cached expression. It must have
+  been initialized with [`init`](@ref). During precompilation, pass the module
+  currently being precompiled so the cache survives precompilation.
+- `context_module::Module`: module in which global names in
+  `function_expression` are resolved. It must have been initialized with
+  [`init`](@ref).
+- `function_expression::Expr`: an anonymous-function or function-definition
+  expression whose body becomes the callable function.
 
-You need to use `RuntimeGeneratedFunctions.init(your_module)` a single time at
-the top level of `your_module` before any other uses of the macro.
+# Keywords
 
-If provided, `context_module` is the module in which symbols within
-`function_expression` will be looked up. By default, this is the module in which
-`@RuntimeGeneratedFunction` is expanded.
+- `opaque_closures = true`: convert closures and generators in
+  `function_expression` to Julia opaque closures. This permits closures in the
+  generated body, with Julia's opaque-closure semantics.
 
-`cache_module` is the module where the expression `code` will be cached. If
-`RuntimeGeneratedFunction` is used during precompilation, this must be a module
-which is currently being precompiled. Normally this would be set to
-`@__MODULE__` using one of the macro constructors.
+# Fields
 
-If `opaque_closures` is `true`, all closures in `function_expression` are
-converted to
-[opaque closures](https://github.com/JuliaLang/julia/pull/37849#issue-496641229).
-This allows for the use of closures and generators inside the generated function,
-but may not work in all cases due to slightly different semantics.
+- `body`: cached body expression while it is retained, or `nothing` after
+  [`drop_expr`](@ref). The function remains callable after dropping its local
+  expression reference because the cache owns the body.
+
+# Serialization
+
+`Serialization.serialize` preserves a runtime-generated function while its
+`body` is retained. Serialize a function before calling [`drop_expr`](@ref): a
+dropped function intentionally does not retain the expression needed to restore
+its cache in another process.
+
 # Examples
-```
-RuntimeGeneratedFunctions.init(@__MODULE__) # Required at module top-level
 
-function foo()
-    expression = :((x,y)->x+y+1) # May be generated dynamically
-    f = @RuntimeGeneratedFunction(expression)
-    f(1,2) # May be called immediately
-end
+```julia
+RuntimeGeneratedFunctions.init(@__MODULE__)
+square = RuntimeGeneratedFunction(@__MODULE__, @__MODULE__, :(x -> x^2))
+square(3)
 ```
-"""
-
-"""
-$_rgf_docs
 """
 struct RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id, B} <: Function
     body::B
@@ -94,12 +95,25 @@ end
 """
     drop_expr(rgf::RuntimeGeneratedFunction)
 
-Return a new `RuntimeGeneratedFunction` that does not hold a reference to the
-function body expression. This allows the expression AST to be garbage collected
-while keeping the function callable.
+Return a copy of `rgf` that does not retain its function body expression.
+This allows the expression AST to be garbage collected while keeping the
+function callable.
+
+# Arguments
+
+- `rgf::RuntimeGeneratedFunction`: generated function whose retained expression
+  should be released.
+
+# Returns
+
+- A `RuntimeGeneratedFunction` with `body === nothing`. It has the same callable
+  behavior as `rgf` while its cache entry remains available.
 
 The expression can still be retrieved later using [`get_expression`](@ref) as long
 as at least one `RuntimeGeneratedFunction` with the same body exists.
+
+Serialize a generated function before calling `drop_expr`. A dropped function has
+discarded the expression needed to restore its cache in another process.
 
 # Examples
 ```julia
@@ -159,7 +173,34 @@ function RuntimeGeneratedFunction(
 end
 
 """
-$_rgf_docs
+    @RuntimeGeneratedFunction(function_expression)
+    @RuntimeGeneratedFunction(context_module, function_expression,
+        opaque_closures = true)
+
+Construct a [`RuntimeGeneratedFunction`](@ref) from a function expression using
+the calling module as its cache module. Call [`init`](@ref) at the top level of
+that module before expanding this macro.
+
+# Arguments
+
+- `function_expression::Expr`: an anonymous-function or function-definition
+  expression to compile.
+- `context_module::Module`: optional module in which global names in
+  `function_expression` are resolved. By default, names resolve in the calling
+  module.
+
+# Keywords
+
+- `opaque_closures = true`: convert closures and generators in the expression to
+  Julia opaque closures.
+
+# Examples
+
+```julia
+RuntimeGeneratedFunctions.init(@__MODULE__)
+increment = @RuntimeGeneratedFunction(:(x -> x + 1))
+increment(2)
+```
 """
 macro RuntimeGeneratedFunction(code)
     return quote
@@ -276,8 +317,29 @@ end
 """
     RuntimeGeneratedFunctions.init(mod)
 
-Use this at top level to set up your module `mod` before using
-`@RuntimeGeneratedFunction`.
+Initialize `mod` for runtime-generated functions.
+
+# Arguments
+
+- `mod::Module`: module that will cache generated expression bodies and own the
+  generated call method.
+
+# Rules
+
+Call `init` once at module top level before using
+[`@RuntimeGeneratedFunction`](@ref) in `mod`, or before passing `mod` as either
+the cache or context module to [`RuntimeGeneratedFunction`](@ref). Repeated calls
+are idempotent. Do not call it from a local scope: it defines a generated method
+in `mod` so that global names resolve in that module.
+
+# Examples
+
+```julia
+module GeneratedFunctionsExample
+using RuntimeGeneratedFunctions
+RuntimeGeneratedFunctions.init(@__MODULE__)
+end
+```
 """
 function init(mod)
     return lock(_cache_lock) do
@@ -412,6 +474,16 @@ end
 
 Retrieve the function expression from a `RuntimeGeneratedFunction`.
 
+# Arguments
+
+- `rgf::RuntimeGeneratedFunction`: generated function whose source expression is
+  requested.
+
+# Returns
+
+- An anonymous-function `Expr` containing the normalized argument names and the
+  cached body.
+
 This works even if [`drop_expr`](@ref) has been called on the function, as long as
 the expression is still in the cache (i.e., at least one `RuntimeGeneratedFunction`
 with the same body exists).
@@ -439,33 +511,6 @@ function get_expression(
     return func_expr = Expr(:->, Expr(:tuple, argnames...), _lookup_body(cache_tag, id))
 end
 
-# We write an explicit serialize() and deserialize() here to manage caching of
-# the body on a remote node when using Serialization.jl (in Distributed.jl
-# and elsewhere)
-function Serialization.serialize(
-        s::AbstractSerializer,
-        rgf::RuntimeGeneratedFunction{
-            argnames, cache_tag,
-            context_tag, id, B,
-        }
-    ) where {
-        argnames,
-        cache_tag,
-        context_tag,
-        id,
-        B,
-    }
-    body = _lookup_body(cache_tag, id)
-    Serialization.serialize_type(
-        s,
-        RuntimeGeneratedFunction{
-            argnames, cache_tag, context_tag,
-            id, B,
-        }
-    )
-    return serialize(s, body)
-end
-
 function Serialization.deserialize(
         s::AbstractSerializer,
         ::Type{
@@ -482,13 +527,18 @@ function Serialization.deserialize(
         B,
     }
     body = deserialize(s)
+    B === Nothing && throw(
+        ArgumentError(
+            "cannot deserialize a dropped RuntimeGeneratedFunction; serialize it before calling drop_expr"
+        )
+    )
     cached_body = _cache_body(cache_tag, id, body)
     f = RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id}(cached_body)
-    return B === Nothing ? drop_expr(f) : f
+    return f
 end
 
-# achieve deepcopy(f)===f behavior similar to "normal" julia functions
-Base.deepcopy_internal(f::RuntimeGeneratedFunction, stackdict::IdDict) = f
+# Match Julia functions: runtime-generated functions are immutable callable values.
+Base.deepcopy(f::RuntimeGeneratedFunction) = f
 
 @specialize
 
