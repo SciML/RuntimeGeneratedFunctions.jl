@@ -2,7 +2,7 @@ module RuntimeGeneratedFunctions
 
 using ExprTools: ExprTools, combinedef, splitdef
 using SHA: SHA, SHA1_CTX, update!
-using Serialization: Serialization, AbstractSerializer, deserialize
+using Serialization: Serialization, AbstractSerializer, deserialize, serialize
 
 export RuntimeGeneratedFunction, @RuntimeGeneratedFunction, drop_expr
 
@@ -49,10 +49,9 @@ it represents one callable method and does not participate in method dispatch.
 
 # Serialization
 
-`Serialization.serialize` preserves a runtime-generated function while its
-`body` is retained. Serialize a function before calling [`drop_expr`](@ref): a
-dropped function intentionally does not retain the expression needed to restore
-its cache in another process.
+`Serialization.serialize` preserves a runtime-generated function, including
+after [`drop_expr`](@ref). A dropped function's expression is recovered from its
+cache while serializing and remains dropped after deserialization.
 
 # Examples
 
@@ -111,9 +110,6 @@ function callable.
 
 The expression can still be retrieved later using [`get_expression`](@ref) as long
 as at least one `RuntimeGeneratedFunction` with the same body exists.
-
-Serialize a generated function before calling `drop_expr`. A dropped function has
-discarded the expression needed to restore its cache in another process.
 
 # Examples
 ```julia
@@ -509,6 +505,51 @@ function get_expression(
         B,
     }
     return func_expr = Expr(:->, Expr(:tuple, argnames...), _lookup_body(cache_tag, id))
+end
+
+struct _SerializedRuntimeGeneratedFunction{argnames, cache_tag, context_tag, id, B}
+    body::B
+end
+
+function Serialization.serialize(
+        s::AbstractSerializer,
+        ::RuntimeGeneratedFunction{
+            argnames, cache_tag,
+            context_tag, id, Nothing,
+        }
+    ) where {
+        argnames,
+        cache_tag,
+        context_tag,
+        id,
+    }
+    body = _lookup_body(cache_tag, id)
+    proxy = _SerializedRuntimeGeneratedFunction{
+        argnames, cache_tag, context_tag, id, typeof(body),
+    }(body)
+    return serialize(s, proxy)
+end
+
+function Serialization.deserialize(
+        s::AbstractSerializer,
+        ::Type{
+            _SerializedRuntimeGeneratedFunction{
+                argnames, cache_tag,
+                context_tag, id, B,
+            },
+        }
+    ) where {
+        argnames,
+        cache_tag,
+        context_tag,
+        id,
+        B,
+    }
+    body = deserialize(s)
+    cached_body = _cache_body(cache_tag, id, body)
+    return drop_expr(
+        RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id}(cached_body)
+    )
 end
 
 function Serialization.deserialize(
