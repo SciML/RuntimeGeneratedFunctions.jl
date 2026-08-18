@@ -4,6 +4,10 @@ using Serialization
 
 RuntimeGeneratedFunctions.init(@__MODULE__)
 
+# Used by the tests that run a script in a fresh process.
+proj = dirname(Base.active_project())
+julia = joinpath(Sys.BINDIR, "julia")
+
 function f(_du, _u, _p, _t)
     @inbounds _du[1] = _u[1]
     @inbounds _du[2] = _u[2]
@@ -129,33 +133,20 @@ GC.gc()
 @test f_drop1(1) == 0
 @test f_drop2(1) == 0
 
-# Test that threaded use works
-tasks = []
-for k in 1:4
-    let k = k
-        t = Threads.@spawn begin
-            r = Bool[]
-            for i in 1:100
-                f = @RuntimeGeneratedFunction(
-                    Base.remove_linenums!(
-                        :(
-                            (
-                                x, y,
-                            ) -> x + y +
-                                $i * $k
-                        )
-                    )
-                )
-                x = 1
-                y = 2
-                push!(r, f(x, y) == x + y + i * k)
-            end
-            r
-        end
-        push!(tasks, t)
+# Test that threaded use works. Cache reads happen while the caller holds
+# Julia's compiler lock, so a cache that blocks there deadlocks instead of
+# failing; the subprocess needs a watchdog and more than one thread.
+let
+    script = joinpath(@__DIR__, "shared", "threaded_rgf.jl")
+    proc = run(`$julia --startup-file=no --project=$proj --threads=8 $script`; wait = false)
+    watchdog = Timer(_ -> process_running(proc) && kill(proc, Base.SIGKILL), 600)
+    try
+        wait(proc)
+    finally
+        close(watchdog)
     end
+    @test success(proc)
 end
-@test all(all.(fetch.(tasks)))
 
 # Test that globals are resolved within the correct scope
 
@@ -208,9 +199,7 @@ ex = :(x -> [2i for i in 1:x])
 
 # Serialization
 
-proj = dirname(Base.active_project())
 serialize_script = joinpath(@__DIR__, "shared", "serialize_rgf.jl")
-julia = joinpath(Sys.BINDIR, "julia")
 buf = IOBuffer(read(`$julia --startup-file=no --project=$proj $serialize_script`))
 deserialized_f, deserialized_g = deserialize(buf)
 @test deserialized_f(11) == "Hi from a separate process. x=11"

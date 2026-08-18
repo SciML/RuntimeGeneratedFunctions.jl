@@ -135,9 +135,9 @@ function drop_expr(
     # GC'd.
     @lock _cache_lock begin
         cache = getfield(parentmodule(cache_tag), _cachename)
-        body = cache[id]
+        body = _cache_getindex(cache, id)
         if body isa WeakRef
-            cache[id] = body.value
+            _cache_setindex!(cache, id, body.value)
         end
     end
     return RuntimeGeneratedFunction{a, cache_tag, c, id}(nothing)
@@ -263,9 +263,57 @@ end
 # little non-robust to weird special cases like Main.eval being
 # Base.MainInclude.eval.)
 
-# It appears we can't use a ReentrantLock here, as contention seems to lead to
-# deadlock. Perhaps because it triggers a task switch while compiling the
-# @generated function.
+# `_lookup_body` runs inside the `generated_callfunc` expansion, i.e. while the
+# calling thread holds Julia's compiler lock, so it must not block: a writer
+# holding `_cache_lock` can itself end up waiting on that compiler lock, since
+# inserting into the cache may compile a specialization. (Yielding instead of
+# blocking is no better, which is why a ReentrantLock deadlocks here too.)
+#
+# Reads are therefore lock-free: the cache is a stack of `Dict`s, newest first,
+# none of which is mutated once published, so a reader takes the stack with one
+# atomic load and probes the levels in order. Writers still serialize on
+# `_cache_lock` and publish a replacement stack.
+#
+# Copying the whole map per insert would be O(n^2) for a package that generates
+# thousands of functions, so a level is merged into the one below it only once
+# it reaches half that level's size (the logarithmic method). Level sizes then
+# more than double going down the stack, bounding both the reader's probes and
+# the entries an insert copies at O(log n).
+mutable struct _BodyCache
+    @atomic levels::Vector{Dict{Any, Any}}
+end
+_BodyCache() = _BodyCache(Dict{Any, Any}[])
+
+struct _NotFound end
+
+function _cache_get(cache::_BodyCache, id)
+    for level in (@atomic :acquire cache.levels)
+        value = get(level, id, _NotFound())
+        value isa _NotFound || return value
+    end
+    return _NotFound()
+end
+
+function _cache_getindex(cache::_BodyCache, id)
+    value = _cache_get(cache, id)
+    value isa _NotFound && throw(KeyError(id))
+    return value
+end
+
+# Caller must hold `_cache_lock`.
+function _cache_setindex!(cache::_BodyCache, id, value)
+    levels = copy(@atomic :monotonic cache.levels)
+    pushfirst!(levels, Dict{Any, Any}(id => value))
+    while length(levels) > 1 && 2 * length(levels[1]) >= length(levels[2])
+        # The newer level wins, so that an updated entry shadows the stale one.
+        merged = merge(levels[2], levels[1])
+        popfirst!(levels)
+        levels[1] = merged
+    end
+    @atomic :release cache.levels = levels
+    return value
+end
+
 _cache_lock = Threads.SpinLock()
 _cachename = Symbol("#_RuntimeGeneratedFunctions_cache")
 _tagname = Symbol("#_RGF_ModTag")
@@ -285,29 +333,27 @@ function _cache_body(cache_tag, id, body)
         # can collect it (causing it to become `nothing`). So root it in a
         # local variable first.
         #
-        cached_body = get(cache, id, nothing)
-        if !isnothing(cached_body)
-            if cached_body isa WeakRef
-                # `value` may be nothing here if it was previously cached but GC'd
-                cached_body = cached_body.value
-            end
+        cached_body = _cache_get(cache, id)
+        if cached_body isa _NotFound
+            cached_body = nothing
+        elseif cached_body isa WeakRef
+            # `value` may be nothing here if it was previously cached but GC'd
+            cached_body = cached_body.value
         end
         if isnothing(cached_body)
             cached_body = body
             # Use a WeakRef to allow `body` to be garbage collected. (After GC, the
             # cache will still contain an empty entry with key `id`.)
-            cache[id] = WeakRef(cached_body)
+            _cache_setindex!(cache, id, WeakRef(cached_body))
         end
         return cached_body
     end
 end
 
 function _lookup_body(cache_tag, id)
-    return lock(_cache_lock) do
-        cache = getfield(parentmodule(cache_tag), _cachename)
-        body = cache[id]
-        body isa WeakRef ? body.value : body
-    end
+    cache = getfield(parentmodule(cache_tag), _cachename)
+    body = _cache_getindex(cache, id)
+    return body isa WeakRef ? body.value : body
 end
 
 """
@@ -342,7 +388,7 @@ function init(mod)
         if !isdefined(mod, _cachename)
             mod.eval(
                 quote
-                    const $_cachename = Dict()
+                    const $_cachename = $RuntimeGeneratedFunctions._BodyCache()
                     struct $_tagname end
 
                     # We create method of `generated_callfunc` in the user's module
