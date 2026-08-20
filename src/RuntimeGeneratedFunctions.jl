@@ -625,7 +625,7 @@ function Serialization.deserialize(
 end
 
 # Match Julia functions: runtime-generated functions are immutable callable values.
-Base.deepcopy(f::RuntimeGeneratedFunction) = f
+Base.deepcopy_internal(f::RuntimeGeneratedFunction, ::IdDict) = f
 
 @specialize
 
