@@ -191,10 +191,13 @@ f_outside = @RuntimeGeneratedFunction(GlobalsTest, :(x -> x + y_in_GlobalsTest))
 ex = :(x -> (y -> x + y))
 @test @RuntimeGeneratedFunction(ex)(2)(3) === 5
 
-# used to stack overflow due to RGF calling itself, #146
+# used to stack overflow / error due to RGF calling itself, #146
 f(x) = x + 1
 ex = :(function(x); f(x); end)
 @test @RuntimeGeneratedFunction(ex)(3) === 4
+__args(x) = x + 2
+ex = :(function(x); __args(x); end)
+@test @RuntimeGeneratedFunction(ex)(3) === 5
 
 ex = :(x -> (f(y::Int)::Float64 = x + y; f))
 @test @RuntimeGeneratedFunction(ex)(2)(3) === 5.0

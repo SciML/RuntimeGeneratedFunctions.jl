@@ -234,16 +234,6 @@ end
 # @RuntimeGeneratedFunction
 function generated_callfunc end
 
-function generated_callfunc_body(argnames, cache_tag, id, __args)
-    setup = (:($(argnames[i]) = @inbounds __args[$i]) for i in 1:length(argnames))
-    body = _lookup_body(cache_tag, id)
-    @assert body !== nothing
-    return quote
-        $(setup...)
-        $(body)
-    end
-end
-
 ### Body caching and lookup
 #
 # Looking up the body of a RuntimeGeneratedFunction based on the id is a little
@@ -382,6 +372,7 @@ end
 function init(mod)
     return lock(_cache_lock) do
         if !isdefined(mod, _cachename)
+            @gensym args
             mod.eval(
                 quote
                     const $_cachename = $RuntimeGeneratedFunctions._BodyCache()
@@ -405,17 +396,20 @@ function init(mod)
                                 $_tagname,
                                 id,
                             },
-                            __args...
+                            $(args)...
                         ) where {
                             argnames,
                             cache_tag,
                             id,
                         }
-                        return $RuntimeGeneratedFunctions.generated_callfunc_body(
-                            argnames,
-                            cache_tag,
-                            id, __args
-                        )
+                        args_sym = $(QuoteNode(args))
+                        setup = (:($(argnames[i]) = @inbounds $(args_sym)[$i]) for i in 1:length(argnames))
+                        body = $RuntimeGeneratedFunctions._lookup_body(cache_tag, id)
+                        @assert body !== nothing
+                        return quote
+                            $(setup...)
+                            $(body)
+                        end
                     end
                 end
             )
