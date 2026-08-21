@@ -625,4 +625,16 @@ Base.deepcopy_internal(f::RuntimeGeneratedFunction, ::IdDict) = f
 
 @specialize
 
+using PrecompileTools: @compile_workload, @setup_workload
+
+@setup_workload begin
+    init(@__MODULE__)
+    @compile_workload begin
+        increment = RuntimeGeneratedFunction(@__MODULE__, @__MODULE__, :(x -> x + 1))
+        increment(41)
+        get_expression(increment)
+        drop_expr(increment)
+    end
+end
+
 end
