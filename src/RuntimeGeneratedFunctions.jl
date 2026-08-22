@@ -399,7 +399,7 @@ function init(mod)
                     #   https://github.com/JuliaLang/julia/pull/32902
                     #   https://github.com/NHDaly/StagedFunctions.jl/blob/master/src/StagedFunctions.jl#L30
                     @inline @generated function $RuntimeGeneratedFunctions.generated_callfunc(
-                            f::$RuntimeGeneratedFunctions.RuntimeGeneratedFunction{
+                            ::$RuntimeGeneratedFunctions.RuntimeGeneratedFunction{
                                 argnames,
                                 cache_tag,
                                 $_tagname,
