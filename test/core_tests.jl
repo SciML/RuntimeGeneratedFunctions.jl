@@ -200,6 +200,15 @@ ex = :(
 )
 @test @RuntimeGeneratedFunction(ex)(3) === 4
 
+# used to call the argument tuple instead of the global function, #146
+__args(x) = x + 2
+ex = :(
+    function (x)
+        return __args(x)
+    end
+)
+@test @RuntimeGeneratedFunction(ex)(3) === 5
+
 ex = :(x -> (f(y::Int)::Float64 = x + y; f))
 @test @RuntimeGeneratedFunction(ex)(2)(3) === 5.0
 
