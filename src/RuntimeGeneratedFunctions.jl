@@ -234,8 +234,8 @@ end
 # @RuntimeGeneratedFunction
 function generated_callfunc end
 
-function generated_callfunc_body(argnames, cache_tag, id, __args)
-    setup = (:($(argnames[i]) = @inbounds __args[$i]) for i in 1:length(argnames))
+function generated_callfunc_body(argnames, cache_tag, id, ˍ₋rgf₋args)
+    setup = (:($(argnames[i]) = @inbounds ˍ₋rgf₋args[$i]) for i in 1:length(argnames))
     body = _lookup_body(cache_tag, id)
     @assert body !== nothing
     return quote
@@ -405,7 +405,7 @@ function init(mod)
                                 $_tagname,
                                 id,
                             },
-                            __args...
+                            ˍ₋rgf₋args...
                         ) where {
                             argnames,
                             cache_tag,
@@ -414,7 +414,7 @@ function init(mod)
                         return $RuntimeGeneratedFunctions.generated_callfunc_body(
                             argnames,
                             cache_tag,
-                            id, __args
+                            id, ˍ₋rgf₋args
                         )
                     end
                 end
