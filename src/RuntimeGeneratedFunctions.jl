@@ -627,8 +627,9 @@ Base.deepcopy_internal(f::RuntimeGeneratedFunction, ::IdDict) = f
 
 using PrecompileTools: @compile_workload, @setup_workload
 
+init(@__MODULE__)
+
 @setup_workload begin
-    init(@__MODULE__)
     @compile_workload begin
         increment = RuntimeGeneratedFunction(@__MODULE__, @__MODULE__, :(x -> x + 1))
         increment(41)
