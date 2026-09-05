@@ -246,3 +246,11 @@ deserialized_f, deserialized_g = deserialize(buf)
 ff = @RuntimeGeneratedFunction(:(x -> [x, x + 1]))
 @test deepcopy(ff) == ff
 @test deepcopy(ff) === ff
+
+@testset "PrecompileTools 1.2 workload" begin
+    mktempdir() do env
+        script = joinpath(@__DIR__, "shared", "precompiletools_v1_2.jl")
+        package = pkgdir(RuntimeGeneratedFunctions)
+        @test success(`$julia --startup-file=no --project=$env $script $package`)
+    end
+end
