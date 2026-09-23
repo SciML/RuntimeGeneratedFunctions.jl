@@ -4,6 +4,8 @@ using Serialization
 
 RuntimeGeneratedFunctions.init(@__MODULE__)
 
+include("hash_expr.jl")
+
 # Used by the tests that run a script in a fresh process.
 proj = dirname(Base.active_project())
 julia = joinpath(Sys.BINDIR, "julia")
