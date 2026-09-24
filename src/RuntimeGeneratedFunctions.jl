@@ -1,7 +1,7 @@
 module RuntimeGeneratedFunctions
 
 using ExprTools: ExprTools, combinedef, splitdef
-using SHA: SHA, SHA1_CTX, update!
+using SHA: SHA, sha1
 using Serialization: Serialization, AbstractSerializer, deserialize, serialize
 
 export RuntimeGeneratedFunction, @RuntimeGeneratedFunction, drop_expr
@@ -434,26 +434,150 @@ function normalize_args(arg::Expr)
 end
 
 function expr_to_id(ex)
-    ctx = SHA1_CTX()
-    _hash_expr!(ctx, ex)
-    return Tuple(reinterpret(UInt32, SHA.digest!(ctx)))
+    io = IOBuffer()
+    _hash_expr!(io, ex, IdDict{Any, Int}())
+    return Tuple(reinterpret(UInt32, sha1(take!(io))))
 end
 
-_hash_expr!(ctx, ::LineNumberNode) = nothing
-const _OPEN = UInt8['(']
-const _SEP = UInt8[',']
-const _CLOSE = UInt8[')']
+# `expr_to_id` serializes the expression to an unambiguous byte stream and hashes
+# that. Leaves are encoded by type and content: `string` would conflate distinct
+# values that print alike, and `objectid` depends on module build ids and
+# addresses, so ids computed at runtime would stop matching the ids of RGFs baked
+# into pkgimages and sysimages. Every item starts with a tag byte, and
+# variable-length data is length-prefixed or NUL-terminated.
+const _NumberLeaf = Union{
+    Int8, Int16, Int32, Int64, Int128, UInt8, UInt16, UInt32, UInt64, UInt128,
+    Float16, Float32, Float64, Bool, Char,
+}
+const _SimpleVector = typeof(Tuple{}.parameters)
 
-function _hash_expr!(ctx, ex::Expr)
-    update!(ctx, _OPEN)
-    update!(ctx, Vector{UInt8}(string(ex.head)))
-    for arg in ex.args
-        update!(ctx, _SEP)
-        _hash_expr!(ctx, arg)
+_hash_tag!(io, tag::Char) = write(io, UInt8(tag))
+_hash_int!(io, n::Integer) = write(io, n % UInt64)
+# Symbols cannot contain NUL.
+_hash_sym!(io, s::Symbol) = (write(io, s); write(io, 0x00))
+function _hash_module!(io, m::Module)
+    names = fullname(m)
+    _hash_int!(io, length(names))
+    for name in names
+        _hash_sym!(io, name)
     end
-    return update!(ctx, _CLOSE)
+    return
 end
-_hash_expr!(ctx, ex) = update!(ctx, Vector{UInt8}(string(ex)))
+
+_hash_expr!(io, ::LineNumberNode, seen) = nothing
+function _hash_expr!(io, ex::Expr, seen)
+    _hash_tag!(io, '(')
+    _hash_sym!(io, ex.head)
+    for arg in ex.args
+        _hash_expr!(io, arg, seen)
+    end
+    return _hash_tag!(io, ')')
+end
+_hash_expr!(io, x::Symbol, seen) = (_hash_tag!(io, 'y'); _hash_sym!(io, x))
+function _hash_expr!(io, x::String, seen)
+    _hash_tag!(io, 's')
+    _hash_int!(io, sizeof(x))
+    return write(io, x)
+end
+function _hash_expr!(io, x::_NumberLeaf, seen)
+    _hash_tag!(io, 'n')
+    _hash_sym!(io, nameof(typeof(x)))
+    return write(io, x isa Char ? reinterpret(UInt32, x) : x)
+end
+_hash_expr!(io, x::Module, seen) = (_hash_tag!(io, 'm'); _hash_module!(io, x))
+function _hash_expr!(io, x::GlobalRef, seen)
+    _hash_tag!(io, 'g')
+    _hash_module!(io, x.mod)
+    return _hash_sym!(io, x.name)
+end
+function _hash_expr!(io, T::DataType, seen)
+    _hash_tag!(io, 'D')
+    _hash_module!(io, T.name.module)
+    _hash_sym!(io, T.name.name)
+    for p in T.parameters
+        _hash_expr!(io, p, seen)
+    end
+    return _hash_tag!(io, ')')
+end
+function _hash_expr!(io, T::Union, seen)
+    _hash_tag!(io, 'U')
+    _hash_expr!(io, T.a, seen)
+    return _hash_expr!(io, T.b, seen)
+end
+function _hash_expr!(io, T::UnionAll, seen)
+    _hash_tag!(io, 'A')
+    _hash_expr!(io, T.var, seen)
+    return _hash_expr!(io, T.body, seen)
+end
+function _hash_expr!(io, v::TypeVar, seen)
+    _hash_tag!(io, 'V')
+    _hash_sym!(io, v.name)
+    _hash_expr!(io, v.lb, seen)
+    return _hash_expr!(io, v.ub, seen)
+end
+_hash_expr!(io, ::Type{Union{}}, seen) = _hash_tag!(io, 'B')
+# These wrap a pointer to their data, which would otherwise be hashed by address.
+function _hash_expr!(io, x::Union{BigInt, BigFloat}, seen)
+    _hash_tag!(io, 'b')
+    _hash_expr!(io, typeof(x), seen)
+    x isa BigFloat && _hash_int!(io, precision(x))
+    return _hash_expr!(io, string(x), seen)
+end
+
+@static if isdefined(Core, :GenericMemory)
+    _is_array_like(x) = x isa Array || x isa Core.GenericMemory
+else
+    _is_array_like(x) = x isa Array
+end
+
+function _hash_expr!(io, @nospecialize(x), seen)
+    T = typeof(x)
+    if ismutabletype(T)
+        n = get(seen, x, 0)
+        if n != 0
+            _hash_tag!(io, '&')
+            return _hash_int!(io, n)
+        end
+        seen[x] = length(seen) + 1
+    end
+    _hash_tag!(io, 'o')
+    _hash_expr!(io, T, seen)
+    if isprimitivetype(T)
+        write(io, Ref(x))
+    elseif _is_array_like(x)
+        for d in size(x)
+            _hash_int!(io, d)
+        end
+        if isprimitivetype(eltype(x))
+            write(io, x)
+        else
+            for i in eachindex(x)
+                if isassigned(x, i)
+                    _hash_expr!(io, x[i], seen)
+                else
+                    _hash_tag!(io, '#')
+                end
+            end
+        end
+    elseif x isa _SimpleVector
+        for i in eachindex(x)
+            _hash_expr!(io, x[i], seen)
+        end
+    elseif nfields(x) == 0 && sizeof(x) > 0
+        # Opaque storage we cannot inspect; identity is the only safe key.
+        _hash_tag!(io, '@')
+        _hash_int!(io, objectid(x))
+    else
+        for i in 1:nfields(x)
+            if isdefined(x, i)
+                _hash_expr!(io, getfield(x, i), seen)
+            else
+                _hash_tag!(io, '#')
+            end
+        end
+    end
+    return _hash_tag!(io, ')')
+end
 
 @nospecialize
 
