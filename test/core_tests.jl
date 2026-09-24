@@ -109,6 +109,10 @@ using RGFPrecompTest
 
 @test RGFPrecompTest.f(1, 2) == 3
 @test RGFPrecompTest.g(40) == 42
+@test RGFPrecompTest.h(1) == 12
+# Rebuilding the expression at runtime must hit the body cached at precompile time.
+@test typeof(RuntimeGeneratedFunction(RGFPrecompTest, RGFPrecompTest, RGFPrecompTest.offset_expr())) ===
+    typeof(RGFPrecompTest.h)
 
 # Test that RuntimeGeneratedFunction with identical body expressions (but
 # allocated separately) don't clobber each other when one is GC'd.
@@ -253,4 +257,60 @@ ff = @RuntimeGeneratedFunction(:(x -> [x, x + 1]))
         package = pkgdir(RuntimeGeneratedFunctions)
         @test success(`$julia --startup-file=no --project=$env $script $package`)
     end
+end
+
+struct PrintsAlike
+    k::Float64
+end
+mutable struct MutablePrintsAlike
+    k::Float64
+end
+for T in (PrintsAlike, MutablePrintsAlike)
+    @eval (s::$T)(x) = s.k * x
+    @eval Base.show(io::IO, ::$T) = print(io, "PrintsAlike")
+end
+make_scaler(k) = x -> k * x
+
+@testset "Embedded objects are identified by type and content" begin
+    for T in (PrintsAlike, MutablePrintsAlike)
+        f2 = @RuntimeGeneratedFunction(:(x -> $(T(2.0))(x)))
+        f3 = @RuntimeGeneratedFunction(:(x -> $(T(3.0))(x)))
+        @test f2(1.0) == 2.0
+        @test f3(1.0) == 3.0
+        @test typeof(f2) !== typeof(f3)
+    end
+
+    g2 = @RuntimeGeneratedFunction(:(x -> $(make_scaler(2))(x)))
+    g3 = @RuntimeGeneratedFunction(:(x -> $(make_scaler(3))(x)))
+    @test (g2(1), g3(1)) == (2, 3)
+
+    sym = @RuntimeGeneratedFunction(:(x -> x))
+    str = @RuntimeGeneratedFunction(:(x -> "x"))
+    @test (sym(1), str(1)) == (1, "x")
+
+    i32 = @RuntimeGeneratedFunction(:(() -> $(Int32(1))))
+    i64 = @RuntimeGeneratedFunction(:(() -> $(Int64(1))))
+    @test i32() isa Int32
+    @test i64() isa Int64
+end
+
+@testset "Equal expressions share one compiled body" begin
+    for T in (PrintsAlike, MutablePrintsAlike)
+        f = @RuntimeGeneratedFunction(:(x -> $(T(2.0))(x)))
+        f_again = @RuntimeGeneratedFunction(:(x -> $(T(2.0))(x)))
+        @test typeof(f_again) === typeof(f)
+        @test f_again.body === f.body
+    end
+    for leaf in (big(2)^70, big(1.5), [1.0, 2.0], Vector{Any}(undef, 2), (1, :a, "b"), Int32, Vector{<:Real})
+        f = @RuntimeGeneratedFunction(:(() -> $leaf))
+        f_again = @RuntimeGeneratedFunction(:(() -> $(deepcopy(leaf))))
+        @test typeof(f_again) === typeof(f)
+    end
+
+    # Ids must not depend on the session, or RGFs stored in pkgimages and
+    # sysimages would never match the ones rebuilt at runtime.
+    script = joinpath(@__DIR__, "shared", "expr_id_stability.jl")
+    ids = [read(`$julia --startup-file=no --project=$proj $script`, String) for _ in 1:2]
+    @test count(==('\n'), ids[1]) == 3
+    @test ids[1] == ids[2]
 end
