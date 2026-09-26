@@ -453,7 +453,15 @@ function _hash_expr!(ctx, ex::Expr)
     end
     return update!(ctx, _CLOSE)
 end
-_hash_expr!(ctx, ex) = update!(ctx, reinterpret(UInt8, [objectid(ex)]))
+function _hash_expr!(ctx, ex)
+    printed = Vector{UInt8}(string(ex))
+    update!(ctx, _OPEN)
+    update!(ctx, reinterpret(UInt8, [UInt(length(printed))]))
+    update!(ctx, printed)
+    update!(ctx, _SEP)
+    update!(ctx, reinterpret(UInt8, [objectid(ex)]))
+    return update!(ctx, _CLOSE)
+end
 
 @nospecialize
 
