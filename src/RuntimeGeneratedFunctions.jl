@@ -398,23 +398,27 @@ function init(mod)
                     # or so. See:
                     #   https://github.com/JuliaLang/julia/pull/32902
                     #   https://github.com/NHDaly/StagedFunctions.jl/blob/master/src/StagedFunctions.jl#L30
+                    # The `where`-parameters are bound inside the generated body,
+                    # so they use hygienic names like `ˍ₋rgf₋args` to keep user
+                    # globals named `argnames`, `cache_tag`, or `id` resolving in
+                    # the user's module scope.
                     @inline @generated function $RuntimeGeneratedFunctions.generated_callfunc(
                             ::$RuntimeGeneratedFunctions.RuntimeGeneratedFunction{
-                                argnames,
-                                cache_tag,
+                                ˍ₋rgf₋argnames,
+                                ˍ₋rgf₋cache_tag,
                                 $_tagname,
-                                id,
+                                ˍ₋rgf₋id,
                             },
                             ˍ₋rgf₋args...
                         ) where {
-                            argnames,
-                            cache_tag,
-                            id,
+                            ˍ₋rgf₋argnames,
+                            ˍ₋rgf₋cache_tag,
+                            ˍ₋rgf₋id,
                         }
                         return $RuntimeGeneratedFunctions.generated_callfunc_body(
-                            argnames,
-                            cache_tag,
-                            id, ˍ₋rgf₋args
+                            ˍ₋rgf₋argnames,
+                            ˍ₋rgf₋cache_tag,
+                            ˍ₋rgf₋id, ˍ₋rgf₋args
                         )
                     end
                 end

@@ -192,6 +192,38 @@ f_outside = @RuntimeGeneratedFunction(GlobalsTest, :(x -> x + y_in_GlobalsTest))
     end
 )
 
+# Globals that share names with the generated call's internal bindings must
+# resolve in the context module's scope, not to those bindings, #34.
+module InternalNameGlobals
+    using RuntimeGeneratedFunctions
+    RuntimeGeneratedFunctions.init(@__MODULE__)
+
+    id = 40
+    argnames = 1
+    cache_tag = 0.5
+    f_id = @RuntimeGeneratedFunction(:(x -> id + x))
+    f_argnames = @RuntimeGeneratedFunction(:(x -> argnames + x))
+    f_cache_tag = @RuntimeGeneratedFunction(:(x -> cache_tag + x))
+end
+
+module InternalNameUndefGlobals
+    using RuntimeGeneratedFunctions
+    RuntimeGeneratedFunctions.init(@__MODULE__)
+
+    f_id = @RuntimeGeneratedFunction(:(x -> id))
+    f_argnames = @RuntimeGeneratedFunction(:(x -> argnames))
+    f_cache_tag = @RuntimeGeneratedFunction(:(x -> cache_tag))
+end
+
+@testset "Internal binding names stay hygienic" begin
+    @test InternalNameGlobals.f_id(2) == 42
+    @test InternalNameGlobals.f_argnames(2) == 3
+    @test InternalNameGlobals.f_cache_tag(2) == 2.5
+    @test_throws UndefVarError InternalNameUndefGlobals.f_id(2)
+    @test_throws UndefVarError InternalNameUndefGlobals.f_argnames(2)
+    @test_throws UndefVarError InternalNameUndefGlobals.f_cache_tag(2)
+end
+
 ex = :(x -> (y -> x + y))
 @test @RuntimeGeneratedFunction(ex)(2)(3) === 5
 
