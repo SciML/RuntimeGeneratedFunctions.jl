@@ -222,6 +222,9 @@ end
     @test_throws UndefVarError InternalNameUndefGlobals.f_id(2)
     @test_throws UndefVarError InternalNameUndefGlobals.f_argnames(2)
     @test_throws UndefVarError InternalNameUndefGlobals.f_cache_tag(2)
+    @test @RuntimeGeneratedFunction(:((id) -> id + 1))(2) == 3
+    @test @RuntimeGeneratedFunction(:((argnames) -> argnames + 1))(2) == 3
+    @test @RuntimeGeneratedFunction(:((cache_tag) -> cache_tag + 1))(2) == 3
 end
 
 ex = :(x -> (y -> x + y))
