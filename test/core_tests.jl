@@ -47,6 +47,16 @@ f3 = @RuntimeGeneratedFunction(ex3)
 
 @test f1 isa Function
 
+@testset "Argument type and arity constraints" begin
+    typed = @RuntimeGeneratedFunction(:((x::Int) -> x + 1))
+    @test typed(41) === 42
+    @test_throws TypeError typed("41")
+
+    unary = @RuntimeGeneratedFunction(:(x -> x))
+    @test_throws MethodError unary()
+    @test_throws MethodError unary(1, 2)
+end
+
 function evaluate_through_function_interface(f::Function, value)
     return f(value)
 end

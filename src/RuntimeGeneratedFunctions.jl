@@ -219,7 +219,10 @@ function Base.show(
     }
     cache_mod = parentmodule(cache_tag)
     context_mod = parentmodule(context_tag)
-    func_expr = Expr(:->, Expr(:tuple, argnames...), _lookup_body(cache_tag, id))
+    display_args = map(argnames) do arg
+        arg isa Tuple ? Expr(:(::), arg[1], decode_annotation(arg[2])) : arg
+    end
+    func_expr = Expr(:->, Expr(:tuple, display_args...), _lookup_body(cache_tag, id))
     return print(
         io, "RuntimeGeneratedFunction(#=in $cache_mod=#, #=using $context_mod=#, ",
         repr(func_expr), ")"
@@ -227,6 +230,7 @@ function Base.show(
 end
 
 function (f::RuntimeGeneratedFunction)(args::Vararg{Any, N}) where {N}
+    N == length(_argnames(f)) || throw(MethodError(f, args))
     return generated_callfunc(f, args...)
 end
 
@@ -235,7 +239,12 @@ end
 function generated_callfunc end
 
 function generated_callfunc_body(argnames, cache_tag, id, ˍ₋rgf₋args)
-    setup = (:($(argnames[i]) = @inbounds ˍ₋rgf₋args[$i]) for i in 1:length(argnames))
+    setup = map(eachindex(argnames)) do i
+        arg = argnames[i]
+        name = arg isa Tuple ? arg[1] : arg
+        lhs = arg isa Tuple ? Expr(:(::), name, decode_annotation(arg[2])) : name
+        Expr(:(=), lhs, Expr(:ref, :ˍ₋rgf₋args, i))
+    end
     body = _lookup_body(cache_tag, id)
     @assert body !== nothing
     return quote
@@ -427,11 +436,43 @@ end
 ###
 ### Utilities
 ###
+# Convert Expr objects into immutable tuples.
+encode_annotation(x::Expr) = (
+    :expr,
+    x.head,
+    Tuple(encode_annotation(arg) for arg in x.args)
+)
+
+# Handle quoted expressions.
+encode_annotation(x::QuoteNode) = (
+    :quote,
+    encode_annotation(x.value)
+)
+
+# Other values, such as Symbols and integers, remain unchanged.
+encode_annotation(x) = x
+
+# Reconstruct an Expr from its tuple representation.
+function decode_annotation(x::Tuple)
+    if x[1] === :expr
+        return Expr(
+            x[2],
+            (decode_annotation(arg) for arg in x[3])...
+        )
+    elseif x[1] === :quote
+        return QuoteNode(decode_annotation(x[2]))
+    end
+
+    return x
+end
+
+decode_annotation(x) = x
+
 normalize_args(args::Vector) = map(normalize_args, args)
 normalize_args(arg::Symbol) = arg
 function normalize_args(arg::Expr)
     arg.head === :(::) || error("argument malformed. Got $arg")
-    return arg.args[1]
+    return (arg.args[1],encode_annotation(arg.args[2]))
 end
 
 function expr_to_id(ex)
@@ -671,7 +712,17 @@ function get_expression(
         id,
         B,
     }
-    return func_expr = Expr(:->, Expr(:tuple, argnames...), _lookup_body(cache_tag, id))
+    decoded_args = map(argnames) do arg
+        arg isa Tuple ?
+            Expr(:(::), arg[1], decode_annotation(arg[2])) :
+            arg
+    end
+
+    return func_expr = Expr(
+        :->,
+        Expr(:tuple, decoded_args...),
+        _lookup_body(cache_tag, id)
+    )
 end
 
 struct _SerializedRuntimeGeneratedFunction{argnames, cache_tag, context_tag, id, B}
