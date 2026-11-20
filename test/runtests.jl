@@ -7,6 +7,8 @@ using SciMLTesting
 # in the caller's (Main) scope; folder-discovery's @safetestset isolation cannot
 # express this, so Core is an explicit thunk while QA uses the standard sub-env.
 run_tests(;
-    core = () -> include(joinpath(@__DIR__, "core_tests.jl")),
+    core = () -> begin
+        include(joinpath(@__DIR__, "core_tests.jl"))
+    end,
     qa = (; env = joinpath(@__DIR__, "qa"), body = joinpath(@__DIR__, "qa", "qa.jl")),
 )

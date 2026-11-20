@@ -50,7 +50,7 @@ f3 = @RuntimeGeneratedFunction(ex3)
 @testset "Argument type and arity constraints" begin
     typed = @RuntimeGeneratedFunction(:((x::Int) -> x + 1))
     @test typed(41) === 42
-    @test_throws TypeError typed("41")
+    @test_throws MethodError typed("41")
 
     unary = @RuntimeGeneratedFunction(:(x -> x))
     @test_throws MethodError unary()

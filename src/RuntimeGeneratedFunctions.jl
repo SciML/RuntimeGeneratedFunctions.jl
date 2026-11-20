@@ -43,9 +43,9 @@ it represents one callable method and does not participate in method dispatch.
 
 # Fields
 
-- `body`: cached body expression while it is retained, or `nothing` after
-  [`drop_expr`](@ref). The function remains callable after dropping its local
-  expression reference because the cache owns the body.
+- `definition`: cached complete function definition while it is retained, or
+  `nothing` after [`drop_expr`](@ref). The function remains callable after
+  dropping its local expression reference because the cache owns the definition.
 
 # Serialization
 
@@ -62,34 +62,48 @@ square(3)
 ```
 """
 struct RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id, B} <: Function
-    body::B
+    definition::B
+    callable::Function
     function RuntimeGeneratedFunction(cache_tag, context_tag, ex; opaque_closures = true)
         def = splitdef(ex)
-        args = normalize_args(get(def, :args, Symbol[]))
         body = def[:body]
         if opaque_closures
             body = closures_to_opaque(body)
         end
-        id = expr_to_id(body)
-        cached_body = _cache_body(cache_tag, id, body)
-        return new{Tuple(args), cache_tag, context_tag, id, typeof(cached_body)}(cached_body)
+        def[:body] = body
+        definition = combinedef(def)
+        id = expr_to_id(definition)
+        cached_definition = _cache_definition(cache_tag, id, definition)
+        callable = _get_or_compile_callable(cache_tag, context_tag, id, cached_definition)
+        args = normalize_args(get(def, :args, Symbol[]))
+        return new{Tuple(args), cache_tag, context_tag, id, typeof(cached_definition)}(
+            cached_definition,
+            callable,
+        )
     end
 
-    # For internal use in deserialize() - doesn't check whether the body is in the cache!
+    # For internal use in deserialize() - doesn't check whether the definition is in the cache!
     function RuntimeGeneratedFunction{
             argnames,
             cache_tag,
             context_tag,
             id,
-        }(body) where {
+        }(definition, callable) where {
             argnames,
             cache_tag,
             context_tag,
             id,
         }
-        return new{argnames, cache_tag, context_tag, id, typeof(body)}(body)
+        return new{argnames, cache_tag, context_tag, id, typeof(definition)}(
+            definition,
+            callable,
+        )
     end
 end
+
+# Preserve the previously accessible property while naming the stored field accurately.
+Base.getproperty(rgf::RuntimeGeneratedFunction, name::Symbol) =
+    name === :body ? getfield(rgf, :definition) : getfield(rgf, name)
 
 _argnames(::RuntimeGeneratedFunction{a}) where {a} = a
 _cache_tag(::RuntimeGeneratedFunction{a, ct}) where {a, ct} = ct
@@ -99,22 +113,22 @@ _id(::RuntimeGeneratedFunction{a, ct, cx, id}) where {a, ct, cx, id} = id
 """
     drop_expr(rgf::RuntimeGeneratedFunction)
 
-Return a copy of `rgf` that does not retain its function body expression.
+Return a copy of `rgf` that does not retain its function definition expression.
 This allows the expression AST to be garbage collected while keeping the
 function callable.
 
 # Arguments
 
-- `rgf::RuntimeGeneratedFunction`: generated function whose retained expression
+- `rgf::RuntimeGeneratedFunction`: generated function whose retained definition
   should be released.
 
 # Returns
 
-- A `RuntimeGeneratedFunction` with `body === nothing`. It has the same callable
+- A `RuntimeGeneratedFunction` with `definition === nothing`. It has the same callable
   behavior as `rgf` while its cache entry remains available.
 
 The expression can still be retrieved later using [`get_expression`](@ref) as long
-as at least one `RuntimeGeneratedFunction` with the same body exists.
+as at least one `RuntimeGeneratedFunction` with the same definition exists.
 
 # Examples
 ```julia
@@ -125,18 +139,21 @@ rgf_dropped(2)  # Still works, returns 4
 ```
 """
 function drop_expr(@nospecialize(rgf::RuntimeGeneratedFunction))
-    # When dropping the reference to the body from an RGF, we need to upgrade
-    # from a weak to a strong reference in the cache to prevent the body being
+    # When dropping the reference to the definition from an RGF, we need to
+    # upgrade from a weak to a strong reference in the cache to prevent it being
     # GC'd.
     a, ct, cx, id = _argnames(rgf), _cache_tag(rgf), _context_tag(rgf), _id(rgf)
     @lock _cache_lock begin
         cache = getfield(parentmodule(ct), _cachename)
-        body = _cache_getindex(cache, id)
-        if body isa WeakRef
-            _cache_setindex!(cache, id, body.value)
+        definition = _cache_getindex(cache, id)
+        if definition isa WeakRef
+            _cache_setindex!(cache, id, definition.value)
         end
     end
-    return RuntimeGeneratedFunction{a, ct, cx, id}(nothing)
+    return RuntimeGeneratedFunction{a, ct, cx, id}(
+        nothing,
+        getfield(rgf, :callable),
+    )
 end
 
 function _check_rgf_initialized(mods...)
@@ -219,44 +236,41 @@ function Base.show(
     }
     cache_mod = parentmodule(cache_tag)
     context_mod = parentmodule(context_tag)
-    display_args = map(argnames) do arg
-        arg isa Tuple ? Expr(:(::), arg[1], decode_annotation(arg[2])) : arg
-    end
-    func_expr = Expr(:->, Expr(:tuple, display_args...), _lookup_body(cache_tag, id))
+    func_expr = _lookup_definition(cache_tag, id)
     return print(
         io, "RuntimeGeneratedFunction(#=in $cache_mod=#, #=using $context_mod=#, ",
         repr(func_expr), ")"
     )
 end
 
-function (f::RuntimeGeneratedFunction)(args::Vararg{Any, N}) where {N}
-    N == length(_argnames(f)) || throw(MethodError(f, args))
-    return generated_callfunc(f, args...)
+function (f::RuntimeGeneratedFunction)(args::Vararg{Any, N}; kwargs...) where {N}
+    return generated_callfunc(f, args, (; kwargs...))
 end
 
 # We'll generate a method of this function in every module which wants to use
 # @RuntimeGeneratedFunction
 function generated_callfunc end
 
-function generated_callfunc_body(argnames, cache_tag, id, ˍ₋rgf₋args)
-    setup = map(eachindex(argnames)) do i
-        arg = argnames[i]
-        name = arg isa Tuple ? arg[1] : arg
-        lhs = arg isa Tuple ? Expr(:(::), name, decode_annotation(arg[2])) : name
-        Expr(:(=), lhs, Expr(:ref, :ˍ₋rgf₋args, i))
-    end
-    body = _lookup_body(cache_tag, id)
-    @assert body !== nothing
-    return quote
-        $(setup...)
-        $(body)
-    end
+function generated_callfunc_body(cache_tag, id)
+    definition = _lookup_definition(cache_tag, id)
+    @assert definition !== nothing
+    return Expr(
+        :call,
+        GlobalRef(@__MODULE__, :_invoke_callable),
+        Expr(:call, GlobalRef(Core, :getfield), :ˍ₋rgf, QuoteNode(:callable)),
+        :ˍ₋rgf₋args,
+        :ˍ₋rgf₋kwargs,
+    )
 end
 
-### Body caching and lookup
+_invoke_callable(callable::Core.OpaqueClosure, args, kwargs) = callable(args, kwargs)
+_invoke_callable(callable::Function, args, kwargs) =
+    Base.invokelatest(callable, args, kwargs)
+
+### Definition caching and lookup
 #
-# Looking up the body of a RuntimeGeneratedFunction based on the id is a little
-# complicated because we want the `id=>body` mapping to survive precompilation.
+# Looking up the definition of a RuntimeGeneratedFunction based on the id is a little
+# complicated because we want the `id=>definition` mapping to survive precompilation.
 # This means we need to store the mapping created by a module in that module
 # itself.
 #
@@ -268,7 +282,7 @@ end
 # little non-robust to weird special cases like Main.eval being
 # Base.MainInclude.eval.)
 
-# `_lookup_body` runs inside the `generated_callfunc` expansion, i.e. while the
+# `_lookup_definition` runs inside the `generated_callfunc` expansion, i.e. while the
 # calling thread holds Julia's compiler lock, so it must not block: a writer
 # holding `_cache_lock` can itself end up waiting on that compiler lock, since
 # inserting into the cache may compile a specialization. (Yielding instead of
@@ -321,16 +335,17 @@ end
 
 _cache_lock = Threads.SpinLock()
 _cachename = Symbol("#_RuntimeGeneratedFunctions_cache")
+_callablename = Symbol("#_RuntimeGeneratedFunctions_callable_cache")
 _tagname = Symbol("#_RGF_ModTag")
 
-function _cache_body(cache_tag, id, body)
+function _cache_definition(cache_tag, id, definition)
     return lock(_cache_lock) do
         cache = getfield(parentmodule(cache_tag), _cachename)
         # Caching is tricky when `id` is the same for different AST instances:
         #
-        # 1. If a function body with the same `id` was cached previously, we need
-        # to use that older instance of the body AST as the canonical one
-        # rather than `body`. This ensures the lifetime of the body in the
+        # 1. If a function definition with the same `id` was cached previously, we need
+        # to use that older instance of the definition AST as the canonical one
+        # rather than `definition`. This ensures the lifetime of the definition in the
         # cache will always cover the lifetime of all RGFs which share the same
         # `id`.
         #
@@ -338,27 +353,158 @@ function _cache_body(cache_tag, id, body)
         # can collect it (causing it to become `nothing`). So root it in a
         # local variable first.
         #
-        cached_body = _cache_get(cache, id)
-        if cached_body isa _NotFound
-            cached_body = nothing
-        elseif cached_body isa WeakRef
+        cached_definition = _cache_get(cache, id)
+        if cached_definition isa _NotFound
+            cached_definition = nothing
+        elseif cached_definition isa WeakRef
             # `value` may be nothing here if it was previously cached but GC'd
-            cached_body = cached_body.value
+            cached_definition = cached_definition.value
         end
-        if isnothing(cached_body)
-            cached_body = body
-            # Use a WeakRef to allow `body` to be garbage collected. (After GC, the
+        if isnothing(cached_definition)
+            cached_definition = definition
+            # Use a WeakRef to allow `definition` to be garbage collected. (After GC, the
             # cache will still contain an empty entry with key `id`.)
-            _cache_setindex!(cache, id, WeakRef(cached_body))
+            _cache_setindex!(cache, id, WeakRef(cached_definition))
         end
-        return cached_body
+        return cached_definition
     end
 end
 
-function _lookup_body(cache_tag, id)
+function _lookup_definition(cache_tag, id)
     cache = getfield(parentmodule(cache_tag), _cachename)
-    body = _cache_getindex(cache, id)
-    return body isa WeakRef ? body.value : body
+    definition = _cache_getindex(cache, id)
+    return definition isa WeakRef ? definition.value : definition
+end
+
+function _collect_context_globals!(x, context_module, names)
+    if x isa GlobalRef
+        x.mod === context_module && !startswith(String(x.name), "#") && push!(names, x.name)
+    elseif x isa Expr && !(x isa QuoteNode)
+        for i in eachindex(x.args)
+            _collect_context_globals!(x.args[i], context_module, names)
+        end
+    elseif x isa Core.CodeInfo
+        for i in eachindex(x.code)
+            _collect_context_globals!(x.code[i], context_module, names)
+        end
+    end
+    return x
+end
+
+function _compile_callable(cache_tag, context_tag, definition)
+    def = splitdef(definition)
+    def[:args] = map(get(def, :args, Any[])) do arg
+        arg isa Expr && arg.head === :(=) ? Expr(:kw, arg.args...) : arg
+    end
+    callable_module_name = gensym(:RGFCallableModule)
+    context_alias = gensym(:RGFContext)
+    method_name = gensym(:RGFCallable)
+    callable_name = gensym(:RGFDispatcher)
+    callable_args = gensym(:RGFArgs)
+    callable_kwargs = gensym(:RGFKeywords)
+    original_name = gensym(:RGFOriginal)
+
+    def[:head] = :function
+    def[:name] = method_name
+    function_expression = combinedef(def)
+    context_module = parentmodule(context_tag)
+    expanded = Base.macroexpand(context_module, function_expression; recursive = true)
+    context_lowered = Meta.lower(context_module, expanded)
+    context_globals = Set{Symbol}()
+    _collect_context_globals!(context_lowered, context_module, context_globals)
+
+    invocation = Expr(
+        :call,
+        original_name,
+        Expr(:parameters, Expr(:..., callable_kwargs)),
+        Expr(:..., callable_args),
+    )
+    dispatcher = Expr(
+        :(->),
+        Expr(
+            :tuple,
+            Expr(:(::), callable_args, GlobalRef(Core, :Tuple)),
+            Expr(:(::), callable_kwargs, GlobalRef(Core, :NamedTuple)),
+        ),
+        invocation,
+    )
+    opaque_dispatcher = if Base.generating_output()
+        dispatcher
+    else
+        Expr(
+            :macrocall,
+            GlobalRef(Base.Experimental, Symbol("@opaque")),
+            LineNumberNode(0),
+            dispatcher,
+        )
+    end
+    callable_definition = Expr(
+        :let,
+        Expr(:(=), original_name, method_name),
+        opaque_dispatcher,
+    )
+
+    body = Expr(
+        :block,
+        Expr(:const, Expr(:(=), context_alias, QuoteNode(context_module))),
+    )
+    if !isempty(context_globals)
+        selectors = map(sort!(collect(context_globals); by = String)) do name
+            Expr(:., name)
+        end
+        import_path = Expr(:., :., context_alias)
+        push!(body.args, Expr(:import, Expr(:(:), import_path, selectors...)))
+    end
+    push!(body.args, expanded)
+    push!(body.args, Expr(:const, Expr(:(=), callable_name, callable_definition)))
+    if Base.generating_output()
+        callable_module_expression = Expr(
+            :module,
+            false,
+            callable_module_name,
+            body,
+        )
+        parent_module = parentmodule(cache_tag)
+        Core.eval(parent_module, callable_module_expression)
+        callable_module = Base.invokelatest(getfield, parent_module, callable_module_name)
+    else
+        callable_module = Module(callable_module_name, false, true)
+        Core.eval(callable_module, body)
+    end
+    callable = Base.invokelatest(getfield, callable_module, callable_name)
+    return callable
+end
+
+function _cache_callable(cache_tag, context_tag, id, callable)
+    key = (id, context_tag)
+    return lock(_cache_lock) do
+        cache = getfield(parentmodule(cache_tag), _callablename)
+        cached_callable = _cache_get(cache, key)
+        if cached_callable isa WeakRef
+            cached_callable = cached_callable.value
+        elseif cached_callable isa _NotFound
+            cached_callable = nothing
+        end
+        if isnothing(cached_callable)
+            cached_callable = callable
+            _cache_setindex!(cache, key, WeakRef(cached_callable))
+        end
+        return cached_callable
+    end
+end
+
+function _get_or_compile_callable(cache_tag, context_tag, id, definition)
+    cache = getfield(parentmodule(cache_tag), _callablename)
+    key = (id, context_tag)
+    cached_callable = _cache_get(cache, key)
+    if cached_callable isa WeakRef
+        cached_callable = cached_callable.value
+        cached_callable !== nothing && return cached_callable
+    elseif !(cached_callable isa _NotFound)
+        return cached_callable
+    end
+    callable = _compile_callable(cache_tag, context_tag, definition)
+    return _cache_callable(cache_tag, context_tag, id, callable)
 end
 
 """
@@ -368,7 +514,7 @@ Initialize `mod` for runtime-generated functions.
 
 # Arguments
 
-- `mod::Module`: module that will cache generated expression bodies and own the
+- `mod::Module`: module that will cache generated function definitions and own the
   generated call method.
 
 # Rules
@@ -394,11 +540,12 @@ function init(mod)
             mod.eval(
                 quote
                     const $_cachename = $RuntimeGeneratedFunctions._BodyCache()
+                    const $_callablename = $RuntimeGeneratedFunctions._BodyCache()
                     struct $_tagname end
 
                     # We create method of `generated_callfunc` in the user's module
-                    # so that any global symbols within the body will be looked up
-                    # in the user's module scope.
+                    # so that generated calls and compiled definitions use the
+                    # intended module context.
                     #
                     # This is straightforward but clunky.  A neater solution should
                     # be to explicitly expand in the user's module and return a
@@ -409,22 +556,22 @@ function init(mod)
                     #   https://github.com/NHDaly/StagedFunctions.jl/blob/master/src/StagedFunctions.jl#L30
                     # `where`-parameters are bound inside the generated body, so they need hygienic names like `ˍ₋rgf₋args`.
                     @inline @generated function $RuntimeGeneratedFunctions.generated_callfunc(
-                            ::$RuntimeGeneratedFunctions.RuntimeGeneratedFunction{
+                            ˍ₋rgf::$RuntimeGeneratedFunctions.RuntimeGeneratedFunction{
                                 ˍ₋rgf₋argnames,
                                 ˍ₋rgf₋cache_tag,
                                 $_tagname,
                                 ˍ₋rgf₋id,
                             },
-                            ˍ₋rgf₋args...
+                            ˍ₋rgf₋args::Tuple,
+                            ˍ₋rgf₋kwargs::NamedTuple,
                         ) where {
                             ˍ₋rgf₋argnames,
                             ˍ₋rgf₋cache_tag,
                             ˍ₋rgf₋id,
                         }
                         return $RuntimeGeneratedFunctions.generated_callfunc_body(
-                            ˍ₋rgf₋argnames,
                             ˍ₋rgf₋cache_tag,
-                            ˍ₋rgf₋id, ˍ₋rgf₋args
+                            ˍ₋rgf₋id,
                         )
                     end
                 end
@@ -449,6 +596,13 @@ encode_annotation(x::QuoteNode) = (
     encode_annotation(x.value)
 )
 
+# Preserve GlobalRef module identity in the normalized argument representation.
+encode_annotation(x::GlobalRef) = (
+    :globalref,
+    fullname(x.mod),
+    x.name,
+)
+
 # Other values, such as Symbols and integers, remain unchanged.
 encode_annotation(x) = x
 
@@ -461,6 +615,12 @@ function decode_annotation(x::Tuple)
         )
     elseif x[1] === :quote
         return QuoteNode(decode_annotation(x[2]))
+    elseif x[1] === :globalref
+        mod = Main
+        for name in x[2]
+            mod = getfield(mod, name)
+        end
+        return GlobalRef(mod, x[3])
     end
 
     return x
@@ -471,7 +631,10 @@ decode_annotation(x) = x
 normalize_args(args::Vector) = map(normalize_args, args)
 normalize_args(arg::Symbol) = arg
 function normalize_args(arg::Expr)
+    arg.head === :... && return normalize_args(arg.args[1])
+    arg.head === :(=) && return normalize_args(arg.args[1])
     arg.head === :(::) || error("argument malformed. Got $arg")
+    length(arg.args) == 1 && return (nothing, encode_annotation(arg.args[1]))
     return (arg.args[1],encode_annotation(arg.args[2]))
 end
 
@@ -685,12 +848,11 @@ Retrieve the function expression from a `RuntimeGeneratedFunction`.
 
 # Returns
 
-- An anonymous-function `Expr` containing the normalized argument names and the
-  cached body.
+- The complete cached function definition expression.
 
 This works even if [`drop_expr`](@ref) has been called on the function, as long as
 the expression is still in the cache (i.e., at least one `RuntimeGeneratedFunction`
-with the same body exists).
+with the same definition exists).
 
 # Examples
 ```julia
@@ -712,39 +874,32 @@ function get_expression(
         id,
         B,
     }
-    decoded_args = map(argnames) do arg
-        arg isa Tuple ?
-            Expr(:(::), arg[1], decode_annotation(arg[2])) :
-            arg
-    end
-
-    return func_expr = Expr(
-        :->,
-        Expr(:tuple, decoded_args...),
-        _lookup_body(cache_tag, id)
-    )
+    return _lookup_definition(cache_tag, id)
 end
 
 struct _SerializedRuntimeGeneratedFunction{argnames, cache_tag, context_tag, id, B}
-    body::B
+    definition::B
+    dropped::Bool
 end
 
 function Serialization.serialize(
         s::AbstractSerializer,
-        ::RuntimeGeneratedFunction{
+        f::RuntimeGeneratedFunction{
             argnames, cache_tag,
-            context_tag, id, Nothing,
+            context_tag, id, B,
         }
     ) where {
         argnames,
         cache_tag,
         context_tag,
         id,
+        B,
     }
-    body = _lookup_body(cache_tag, id)
+    dropped = B === Nothing
+    definition = dropped ? _lookup_definition(cache_tag, id) : getfield(f, :definition)
     proxy = _SerializedRuntimeGeneratedFunction{
-        argnames, cache_tag, context_tag, id, typeof(body),
-    }(body)
+        argnames, cache_tag, context_tag, id, typeof(definition),
+    }(definition, dropped)
     return serialize(s, proxy)
 end
 
@@ -763,11 +918,20 @@ function Serialization.deserialize(
         id,
         B,
     }
-    body = deserialize(s)
-    cached_body = _cache_body(cache_tag, id, body)
-    return drop_expr(
-        RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id}(cached_body)
+    definition = deserialize(s)
+    dropped = deserialize(s)
+    cached_definition = _cache_definition(cache_tag, id, definition)
+    callable = _get_or_compile_callable(
+        cache_tag,
+        context_tag,
+        id,
+        cached_definition,
     )
+    f = RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id}(
+        cached_definition,
+        callable,
+    )
+    return dropped ? drop_expr(f) : f
 end
 
 function Serialization.deserialize(
@@ -785,14 +949,23 @@ function Serialization.deserialize(
         id,
         B,
     }
-    body = deserialize(s)
+    definition = deserialize(s)
     B === Nothing && throw(
         ArgumentError(
             "cannot deserialize a dropped RuntimeGeneratedFunction; serialize it before calling drop_expr"
         )
     )
-    cached_body = _cache_body(cache_tag, id, body)
-    f = RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id}(cached_body)
+    cached_definition = _cache_definition(cache_tag, id, definition)
+    callable = _get_or_compile_callable(
+        cache_tag,
+        context_tag,
+        id,
+        cached_definition,
+    )
+    f = RuntimeGeneratedFunction{argnames, cache_tag, context_tag, id}(
+        cached_definition,
+        callable,
+    )
     return f
 end
 
