@@ -391,6 +391,12 @@ function _collect_context_globals!(x, context_module, names)
     return x
 end
 
+@static if isdefined(Base, :generating_output)
+    _generating_output() = Base.generating_output()
+else
+    _generating_output() = false
+end
+
 function _compile_callable(cache_tag, context_tag, definition)
     def = splitdef(definition)
     def[:args] = map(get(def, :args, Any[])) do arg
@@ -428,7 +434,7 @@ function _compile_callable(cache_tag, context_tag, definition)
         ),
         invocation,
     )
-    opaque_dispatcher = if Base.generating_output()
+    opaque_dispatcher = if _generating_output()
         dispatcher
     else
         Expr(
@@ -457,7 +463,7 @@ function _compile_callable(cache_tag, context_tag, definition)
     end
     push!(body.args, expanded)
     push!(body.args, Expr(:const, Expr(:(=), callable_name, callable_definition)))
-    if Base.generating_output()
+    if _generating_output()
         callable_module_expression = Expr(
             :module,
             false,
